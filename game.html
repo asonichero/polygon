@@ -8,10 +8,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Consequence">
+<meta name="apple-mobile-web-app-title" content="Polygon">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<title>Climbing Toward Consequence</title>
+<title>Polygon</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e13; color: #ece8df; font-family: Georgia, 'Times New Roman', serif; touch-action: none; -webkit-user-select: none; user-select: none; }
   #stage { position: fixed; inset: 0; } #stage canvas { display: block; }
@@ -24,20 +24,19 @@
   button, .btn { font: inherit; background: #2a2d3a; color: #ece8df; border: 1px solid #5a5f72; border-radius: 6px; padding: 10px 16px; font-size: 16px; cursor: pointer; margin: 8px 8px 0 0; text-decoration: none; display: inline-block; }
   button:hover, .btn:hover { background: #3a3f52; } button.primary { background: #6b5a2a; border-color: #c9a84c; } button:disabled { opacity: .4; cursor: default; }
   #title { flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding-left: 6vw; background: linear-gradient(90deg, rgba(8,10,14,0.72) 0%, rgba(8,10,14,0.35) 45%, rgba(8,10,14,0) 75%); }
-  #title h1 { margin: 0; font-size: clamp(30px, 5.4vw, 64px); line-height: 1.1; max-width: 8em; font-weight: normal; letter-spacing: .08em; color: #f3e4b0; text-shadow: 0 3px 0 #5a4418, 0 0 40px rgba(0,0,0,.7); text-transform: uppercase; }
+  #title h1 { margin: 0; font-size: clamp(34px, 6.4vw, 76px); line-height: 1.05; font-weight: normal; letter-spacing: .12em; color: #f3e4b0; text-shadow: 0 3px 0 #5a4418, 0 0 40px rgba(0,0,0,.7); text-transform: uppercase; }
   #title .sub { margin: 6px 0 28px; font-size: clamp(14px, 2.4vw, 20px); color: #e4dcc4; text-shadow: 0 1px 6px #000; font-style: italic; }
   #menu { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-  #menu button { min-width: 230px; margin: 0; padding: 12px 20px; font-size: 18px; background: rgba(20,22,30,0.82); }
-  #chCard { position: fixed; inset: 0; z-index: 90; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; opacity: 0; transition: opacity 1.2s ease; text-align: center; font-family: Georgia, 'Times New Roman', serif; color: #ece8df; cursor: pointer; }
-  #chCard #chNum { font-size: clamp(12px, 2.2vw, 18px); letter-spacing: .5em; text-transform: uppercase; color: #c9b87a; padding-left: .5em; }
-  #chCard #chTitle { font-size: clamp(28px, 6.4vw, 62px); letter-spacing: .06em; font-weight: normal; max-width: 90vw; }
-  #chCard #chRule { width: 64px; height: 1px; background: #8a7a4a; }
-  #dev { position: fixed; left: 12px; bottom: 10px; font-size: 12px; opacity: .65; z-index: 31; } #dev a { color: #c9b87a; margin-right: 12px; } #dev select { background: #1a1d26; color: #c9b87a; border: 1px solid #4a4d58; border-radius: 4px; font-size: 12px; padding: 2px 4px; }
-  #ver { position: fixed; right: 12px; bottom: 10px; font-size: 14px; font-weight: bold; letter-spacing: .04em; color: #f3e4b0; background: rgba(8,10,14,0.78); border: 1px solid #5a5f72; border-radius: 6px; padding: 4px 10px; opacity: 1; z-index: 31; }
-  #settings, #endcard { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; }
+  #menu button, #menu a.btn { min-width: 250px; margin: 0; padding: 12px 20px; font-size: 18px; background: rgba(20,22,30,0.82); text-align: left; }
+  #menu .primary { background: rgba(107,90,42,0.9); }
+  #dev { position: fixed; left: 12px; bottom: 10px; font-size: 12px; opacity: .65; z-index: 31; } #dev a { color: #c9b87a; margin-right: 12px; }
+  #ver { position: fixed; right: 12px; bottom: 10px; font-size: 14px; font-weight: bold; letter-spacing: .04em; color: #f3e4b0; background: rgba(8,10,14,0.78); border: 1px solid #5a5f72; border-radius: 6px; padding: 4px 10px; z-index: 31; }
+  #settings { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 9px 0; font-size: 15px; }
   .row.stack { flex-direction: column; align-items: stretch; gap: 2px; margin: 12px 0; } .row.stack input[type=range] { width: 100%; margin: 0; }
-  .card.narrow { max-width: 340px; width: min(340px, 90vw); max-height: 92vh; overflow-y: auto; }
+  .row select { background: #1a1d26; color: #ece8df; border: 1px solid #4a4d58; border-radius: 4px; font: inherit; font-size: 14px; padding: 3px 6px; }
+  .card.narrow { max-width: 360px; width: min(360px, 90vw); max-height: 92vh; overflow-y: auto; }
+  .card h3 { margin: 14px 0 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #9aa0ac; font-weight: normal; border-bottom: 1px solid #2c2c36; padding-bottom: 3px; }
   #subs { position: fixed; left: 50%; bottom: 5vh; transform: translateX(-50%); width: min(780px, 92vw); display: none; z-index: 41; background: rgba(8,8,12,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 12px 18px 14px; font-size: clamp(15px, 2.2vw, 20px); line-height: 1.5; }
   @media (pointer: coarse) { body:not(.cutscene) #subs { left: 170px; right: 200px; width: auto; transform: none; bottom: 3vh; pointer-events: none; } }       /* (while playing, a line sits between the thumbs and never covers a button) */
   #subWho { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; } #subText { min-height: 1.5em; }
@@ -48,22 +47,17 @@
   #tapHint { position: fixed; left: 50%; bottom: 1.6vh; transform: translateX(-50%); font-size: 12px; opacity: .55; z-index: 19; display: none; } body.cutscene #tapHint { display: block; }
   #subChoices { display: none; margin-top: 8px; } #subChoices .choice { display: block; width: 100%; text-align: left; margin: 6px 0 0; padding: 10px 14px; font-size: clamp(14px, 1.9vw, 17px); background: rgba(40,44,56,0.9); }
   #subGate { display: none; margin: 10px 0 0; float: right; font-size: 18px; padding: 10px 30px; }
-  /* Chapter One's HUD (Market Day) */
-  .mhud { position: fixed; inset: 0; pointer-events: none; z-index: 12; } 
-  .mobj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); max-width: 80vw; text-align: center; }
-  .mpace { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); font-size: 13px; opacity: .85; text-shadow: 0 1px 4px #000; } .mpace.warn { color: #f0a090; opacity: 1; }
-  .mtrust { position: absolute; left: 14px; top: 12px; width: min(230px, 40vw); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
-  .mtb { height: 10px; background: #1c1f27; border: 1px solid #454a58; border-radius: 4px; overflow: hidden; margin-top: 4px; } .mtb i { display: block; height: 100%; width: 90%; background: linear-gradient(90deg, #5a8a4a, #c9a84c); } .mtb i.full { background: #7fd070; }
-  .mhint { position: absolute; left: 50%; bottom: 18vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 15px; display: none; }
-  .mtoast { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; max-width: 86vw; text-align: center; opacity: 0; transition: opacity .4s; }
-  .touchonly { display: none; } @media (pointer: coarse) { .touchonly { display: block; } }
+  /* the sandbox's HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 12; display: none; } body.playing #hud { display: block; }
+  #hint { position: absolute; left: 50%; bottom: 18vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 15px; display: none; }
+  #toast { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; max-width: 86vw; text-align: center; opacity: 0; transition: opacity .4s; }
+  #sizeTag { position: absolute; left: 14px; top: 12px; background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
   #dbgBar { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 36; display: none; align-items: center; gap: 4px; background: rgba(10,12,16,.82); border: 1px solid #4a4d58; border-radius: 8px; padding: 3px 8px; font-size: 12px; } body.dbg #dbgBar { display: flex; }
   #dbgBar button { margin: 0; padding: 4px 11px; font-size: 14px; } #dbgInfo { opacity: .7; margin-left: 6px; min-width: 64px; }
   #menuBtn { position: fixed; right: 12px; top: 10px; z-index: 37; margin: 0; padding: 0; width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); background: rgba(20,22,30,0.72); display: none; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; } #menuBtn svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; } #menuBtn:hover { background: rgba(60,66,90,0.95); } body.inplay #menuBtn { display: flex; } body.pm #menuBtn { display: none; }
-  #pmenu { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; z-index: 50; } #pmenu #bReset { display: none; } #pmenu .card button { display: block; width: 100%; margin: 10px 0 0; }
-  #titleShot { position: fixed; inset: 0; z-index: 29; display: none; background-size: cover; background-position: center; } body.titlePic #titleShot { display: block; }
-  body.inplay #ver { display: none; }
-  body.playing #tapHint, body.playing #skip, body.playing #ver { display: none; }
+  #pmenu { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; z-index: 50; } #pmenu .card button { display: block; width: 100%; margin: 10px 0 0; }
+  body.inplay #ver, body.playing #ver { display: none; }
+  body.playing #tapHint, body.playing #skip { display: none; } body.playing.cutscene #skip { display: flex; }
 </style>
 </head>
 <body>
@@ -73,40 +67,46 @@
 <div id="notice" class="screen">
   <div class="card">
     <h2>Before you begin</h2>
-    <p>Climbing Toward Consequence is an adult game. It contains mature themes, including consensual adult discipline (spanking), shown between adult characters in a fairy-tale setting, with some nudity from the waist down in those scenes.</p>
-    <p>Every scene can be stopped at once with the safe word, <b>Red</b>. Nothing in the game is held against you for using it.</p>
-    <p>You must be 18 or over to play.</p>
+    <p>Polygon is an adult engine and sandbox. It contains mature themes, including consensual adult discipline (spanking), shown between adult characters, with some nudity from the waist down in the correction scene.</p>
+    <p>That scene can be stopped at once with the safe word, <b>Red</b>. Nothing is held against you for using it.</p>
+    <p>You must be 18 or over to use it.</p>
     <button class="primary" id="noticeYes">I am 18 or over &mdash; continue</button>
     <button id="noticeNo">Leave</button>
   </div>
 </div>
 
-<div id="titleShot"></div>
 <div id="title" class="screen">
-  <h1>Climbing Toward Consequence</h1>
-  <div class="sub">Jack and the Beanstalk, for grown-ups</div>
+  <h1>Polygon</h1>
+  <div class="sub">a low-poly engine: Jack and Gerda, N64 and PlayStation style</div>
   <div id="menu">
-    <button id="bNew" class="primary">New Game</button>
-    <button id="bContinue">Continue</button>
+    <button id="bPlay" class="primary">Sandbox</button>
+    <a class="btn" id="bLap" href="lap.html">Correction scene</a>
+    <a class="btn" id="bModels" href="models.html">Models</a>
     <button id="bSettings">Settings</button>
   </div>
 </div>
-<div id="chCard"><div id="chNum"></div><div id="chRule"></div><div id="chTitle"></div></div>
-<div id="dev" class="screen-dev"><select id="levelSel" style="display:none" title="Level select (does not touch your save)"><option value="">Level select&hellip;</option><option value="opening">Prologue: the opening</option><option value="market">Chapter One: Market Day &mdash; the cow</option><option value="road">Chapter One: the market road</option><option value="cart">Chapter One: the Peddler's cart</option><option value="nightH">Chapter One: night, humble</option><option value="nightC">Chapter One: night, cheeky</option><option value="nightB">Chapter One: night, brash (the birch)</option><option value="corrH">Chapter One: the correction, humble</option><option value="corrC">Chapter One: the correction, cheeky</option><option value="corrB">Chapter One: the correction, brash (the birch)</option><option value="gardenH">Chapter One: planting, humble</option><option value="gardenC">Chapter One: planting, cheeky</option><option value="gardenB">Chapter One: planting, brash</option><option value="ch3">Chapter Two: The Climb &mdash; waking, through to the end</option><option value="ch3d">Chapter Two: dress and the knife</option><option value="climb">Chapter Two: the climb itself</option><option value="meadow">Chapter Two: the cloud meadow</option><option value="castlehall">Chapter Two: inside the castle (the hall)</option><option value="castlecatch">Chapter Two: Gerda catches Jack (the capture)</option><option value="castle">Test: explore the castle</option><option value="ch3open">Chapter Three: the kitchen (the box on the table)</option><option value="ch3nursery">Chapter Three: the nursery</option><option value="ch3disc">Chapter Three: the nursery correction</option><option value="ch3dress">Chapter Three: dressed at the table</option><option value="ch3chores">Ch3: the hen chores</option><option value="ch3bath">Ch3: bath time</option><option value="cards">Test: the chapter title cards</option></select></div>
-<div id="ver">v0.4.1 &middot; build 222 &middot; 2026-10-14</div>
+<div id="dev" class="screen-dev"></div>
+<div id="ver">v0.5.0</div>
 
 <div id="settings" class="screen">
   <div class="card narrow">
     <h2>Settings</h2>
+    <h3>Sound</h3>
     <div class="row stack"><span>Master volume</span><input type="range" id="vMaster" min="0" max="100"></div>
     <div class="row stack"><span>Music</span><input type="range" id="vMusic" min="0" max="100"></div>
     <div class="row stack"><span>Sound effects</span><input type="range" id="vSfx" min="0" max="100"></div>
     <div class="row stack"><span>Voices</span><input type="range" id="vVoice" min="0" max="100"></div>
+    <h3>Dialogue</h3>
     <div class="row stack"><span>Dialogue speed</span><input type="range" id="vSpeed" min="50" max="200"></div>
     <div class="row"><span>Advance dialogue automatically</span><input type="checkbox" id="cAuto"></div>
     <div class="row"><span>Subtitles</span><input type="checkbox" id="cSubs"></div>
-    <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In any correction scene the Red button ends it at once, with nothing held against you.</p>
-    <button id="bReset">Delete saved game</button><button class="primary" id="bBack">Back</button>
+    <h3>Picture</h3>
+    <div class="row"><span>Resolution</span><select id="sLines"><option value="0">Native</option><option value="480">480 lines</option><option value="360">360 lines</option><option value="240">240 lines (PlayStation)</option></select></div>
+    <div class="row"><span>15-bit colour dither</span><input type="checkbox" id="cDither"></div>
+    <div class="row"><span>Polygon wobble (vertex snap)</span><input type="checkbox" id="cSnap"></div>
+    <div class="row"><span>Smooth pixels (N64 filter)</span><input type="checkbox" id="cSmooth"></div>
+    <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In the correction scene the Red button ends it at once, with nothing held against you.</p>
+    <button class="primary" id="bBack">Back</button>
   </div>
 </div>
 
@@ -119,15 +119,7 @@
   </div>
 </div>
 
-<div id="endcard" class="screen">
-  <div class="card" style="text-align:center">
-    <h2 id="endTitle">Chapter One &mdash; Market Day</h2>
-    <p id="endText">Jack has a cow to sell in the morning.</p>
-    <p style="opacity:.7;font-size:14px">To be continued. Your game is saved at this point.</p>
-    <button class="primary" id="bTitle">Back to the title</button>
-  </div>
-</div>
-
+<div id="hud"><div id="sizeTag"></div><div id="hint"></div><div id="toast"></div></div>
 <div id="subs"><div id="subWho"></div><div id="subText"></div><button id="subGate" class="primary">Continue</button><div id="subChoices"></div></div>
 <div id="tapHint">tap or press space to move on</div>
 <button id="skip" title="Skip scene"><svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7z"/><path d="M16 5v14"/><path d="M19 5v14"/></svg><span>Skip</span></button>
@@ -135,32 +127,15 @@
 <div id="dbgBar"><button id="dbgBack" title="Back to the start of the previous beat (,)">⏮</button><button id="dbgPlay" title="Pause / play (P)">❚❚</button><button id="dbgFwd" title="On to the next beat (.)">⏭</button><span id="dbgInfo"></span></div>
 
 <script src="vendor/three.min.js"></script>
-<script src="js/blocky.js"></script>
-<script src="js/cast.js"></script>
+<script src="js/poly-geo.js"></script>
+<script src="js/poly.js"></script>
+<script src="js/poly-jack.js"></script>
+<script src="js/poly-gerda.js"></script>
+<script src="js/retro.js"></script>
 <script src="js/audio.js"></script>
-<script src="js/farm-layout.js"></script>
-<script src="js/farm.js"></script>
 <script src="js/game.js"></script>
-<script src="js/opening.js"></script>
-<script src="js/market.js"></script>
 <script src="js/touchui.js"></script>
-<script src="js/road.js"></script>
-<script src="js/pain.js"></script>
-<script src="js/lap-poses.js"></script>
-<script src="js/lap.js"></script>
-<script src="vendor/OrbitControls.js"></script>
-<script src="js/night.js"></script>
-<script src="js/correction.js"></script>
-<script src="js/garden.js"></script>
-<script src="js/chapter3.js"></script>
-<script src="js/climb.js"></script>
-<script src="js/meadow.js"></script>
-<script src="js/castle.js"></script>
-<script src="js/castle-layout.js"></script>
-<script src="js/gerda-pose.js"></script>
-<script src="js/gerda-pose-half.js"></script>
-<script src="js/capture-cams.js"></script>
-<script src="js/castlewalk.js"></script>
+<script src="js/stage.js"></script>
 <script src="js/debuglib.js"></script>
 <script src="js/menus.js"></script>
 </body>

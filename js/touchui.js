@@ -1,4 +1,4 @@
-// Climbing Toward Consequence — the touch controls, one set for every walking scene.
+// Polygon — the touch controls, one set for every walking scene.
 //   Left thumb: the stick, with Sneak (a latching toggle) just above it.  Right thumb: Jump / Climb (big, lowest), Action / Pick up beside it, Run (held while pressed) above it, and Drop between them.
 //   Every button is always on screen, greyed out when the scene has no use for it or it would do nothing.  Top right, under the Menu button: the camera button (the same round camera as the correction scenes), which steps through the zooms and first person.
 //   Every button has an icon; Jump and Action also carry a small label for what a tap will do now. A button that would do nothing is greyed out and ignores taps.
@@ -50,7 +50,7 @@ let UI = null;
 // ── Tips and prompts: shown on desktop only (the touch buttons say what they do). `Tips.once(key, show)` runs `show` the first time a control is needed, once ever; `Tips.clean(text)` drops key names from a line on touch screens. ──
 let usedMouse = false;       // (a device with both: once a mouse or a key is used, it is a desktop, and the touch controls go until a finger is used again)
 const coarse = () => /[?&]touch\b/.test(root.location ? root.location.search : '') || (!usedMouse && !!(root.matchMedia && root.matchMedia('(pointer: coarse)').matches));
-const TIPKEY = 'castle-consequence:tips:v1'; let seen = null;
+const TIPKEY = 'polygon:tips:v1'; let seen = null;
 const load = () => { if (seen) return seen; try { seen = JSON.parse(root.localStorage.getItem(TIPKEY) || '{}') || {}; } catch (e) { seen = {}; } return seen; };
 const Tips = { mobile: coarse,
   clean: s => coarse() && typeof s === 'string' ? s.replace(/\s*\((?:E|Q|C|V|Space|Shift)(?:\s*(?:or|\/)\s*(?:E|Q|C|V|Space))*(?: at the tree)?\)/g, '') : s,
@@ -69,7 +69,7 @@ function build() {
   root.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !usedMouse) mode(true); }, true);
   root.addEventListener('keydown', e => { if (/^(w|a|s|d|e|q|c|x|W|A|S|D|E|Q|C|X| |Arrow.*|Shift)$/.test(e.key) && !usedMouse) mode(true); }, true);
   const sheet = document.createElement('div'); sheet.id = 'tSheet';
-  sheet.innerHTML = '<div class="card"><h3>Controls</h3><table>' + [['<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows', 'Move'], ['<kbd>Shift</kbd> (hold)', 'Run'], ['<kbd>C</kbd> or <kbd>X</kbd>', 'Sneak (slow and quiet)'], ['<kbd>Space</kbd>', 'Jump; at wood or a ledge, climb (hold to keep going)'], ['<kbd>E</kbd>', 'Action: use, open, talk, speak softly'], ['<kbd>Q</kbd>', 'Pick up, or put down, what you carry'], ['Wheel, or the camera button', 'Camera zoom'], ['Drag', 'Look around']].map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table><div class="x">Click anywhere or press Esc to close</div></div>';
+  sheet.innerHTML = '<div class="card"><h3>Controls</h3><table>' + [['<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows', 'Move'], ['<kbd>Shift</kbd> (hold)', 'Run'], ['<kbd>C</kbd> or <kbd>X</kbd>', 'Sneak (slow and quiet)'], ['<kbd>Space</kbd>', 'Jump'], ['<kbd>E</kbd>', 'Action: sit, stand, talk'], ['<kbd>[</kbd> <kbd>]</kbd>', 'Shrink or grow Jack (50% to 100%)'], ['<kbd>V</kbd>, wheel, or the camera button', 'Camera zoom'], ['Drag', 'Look around']].map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table><div class="x">Click anywhere or press Esc to close</div></div>';
   document.body.appendChild(sheet);
   const toggleSheet = on => sheet.classList.toggle('open', on === undefined ? !sheet.classList.contains('open') : on);
   sheet.addEventListener('pointerdown', () => toggleSheet(false)); root.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open')) { toggleSheet(false); e.stopPropagation(); } }, true);

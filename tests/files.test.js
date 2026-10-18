@@ -1,20 +1,29 @@
 // Sanity checks on the shipped files: every script parses, every file the pages and the service worker name exists, and the manifest is complete.
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.join(__dirname, '..'), read = f => fs.readFileSync(path.join(root, f), 'utf8');
+const PAGES = ['index.html', 'game.html', 'lap.html', 'models.html'];
 
 test('every game script parses', () => {
   for (const f of fs.readdirSync(path.join(root, 'js')).filter(n => n.endsWith('.js'))) assert.doesNotThrow(() => new vm.Script(read('js/' + f), { filename: f }), f);
 });
 
 test('pages only load scripts that exist', () => {
-  for (const page of ['index.html', 'game.html', 'level.html', 'lap.html', 'blocky.html'])
+  for (const page of PAGES)
     for (const m of read(page).matchAll(/<script src="([^"]+)"/g)) assert.ok(fs.existsSync(path.join(root, m[1])), `${page} loads ${m[1]}`);
 });
 
-test('the service worker caches only files that exist, and covers every script the level loads', () => {
+test('every page that builds a figure loads the figure code in order', () => {
+  for (const page of ['game.html', 'lap.html', 'models.html']) {
+    const srcs = [...read(page).matchAll(/<script src="([^"]+)"/g)].map(m => m[1]), at = f => srcs.indexOf(f);
+    for (const f of ['vendor/three.min.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-jack.js', 'js/poly-gerda.js']) assert.ok(at(f) >= 0, `${page} loads ${f}`);
+    assert.ok(at('vendor/three.min.js') < at('js/poly-geo.js') && at('js/poly-geo.js') < at('js/poly.js') && at('js/poly.js') < at('js/poly-jack.js') && at('js/poly.js') < at('js/poly-gerda.js'), `${page} loads the figure code in dependency order`);
+  }
+});
+
+test('the service worker caches only files that exist, and covers every script the pages load', () => {
   const sw = read('sw.js'), files = [...sw.match(/const FILES = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(m => m[1]);
   for (const f of files) assert.ok(fs.existsSync(path.join(root, f)), `sw.js lists ${f}`);
-  for (const page of ['game.html', 'level.html']) for (const m of read(page).matchAll(/<script src="([^"]+)"/g)) assert.ok(files.includes(m[1]), `sw.js caches ${m[1]} (${page})`);
+  for (const page of PAGES.filter(p => p !== 'index.html')) { assert.ok(files.includes(page), `sw.js caches ${page}`); for (const m of read(page).matchAll(/<script src="([^"]+)"/g)) assert.ok(files.includes(m[1]), `sw.js caches ${m[1]} (${page})`); }
 });
 
 test('the manifest is installable', () => {
@@ -28,4 +37,10 @@ test('the debug library lists every script and every page', () => {
   const lib = read('js/debuglib.js'), listed = f => lib.includes("'" + f + "'") || lib.includes("'" + f + "?");
   for (const f of fs.readdirSync(path.join(root, 'js')).filter(n => n.endsWith('.js'))) assert.ok(listed('js/' + f), `debuglib lists js/${f}`);
   for (const f of fs.readdirSync(root).filter(n => n.endsWith('.html') && n !== 'index.html' && n !== 'game.html')) assert.ok(listed(f), `debuglib lists ${f}`);
+});
+
+test('no story content is left behind', () => {
+  const gone = ['farm', 'opening', 'market', 'road', 'night', 'correction', 'garden', 'chapter3', 'climb', 'meadow', 'castle', 'castlewalk', 'level', 'cast', 'blocky'];
+  for (const n of gone) assert.ok(!fs.existsSync(path.join(root, 'js', n + '.js')), `js/${n}.js is gone`);
+  for (const f of fs.readdirSync(path.join(root, 'js')).filter(n => n.endsWith('.js'))) for (const w of ['Beanstalk', 'beanstalk', 'Market', 'Peddler', 'Milky-White', 'Birchwood']) assert.ok(!read('js/' + f).includes(w), `js/${f} does not mention ${w}`);
 });

@@ -39,7 +39,7 @@ function makeGerda(outfit) {
   const earSkin = S.face.texel(1, 20);
   for (const sg of [1, -1]) {
     const e = ball(0.45, 0.9, 0.7, 6, 3, earSkin); place(e, sg * 2.85, 3.7, -0.15, 0, 0, sg * 0.18); mk(hscale(e), rig.neck, mat, 'ear');
-    const ring = ball(0.3, 0.3, 0.3, 6, 3, trim(0)); place(ring, sg * 3.0, 2.85, -0.1); mk(hscale(ring), rig.neck, mat, 'earring');              // small gold earrings
+    const ring = box(0.5, 0.7, 0.5, trim(0)); place(ring, sg * 3.0, 2.85, -0.1); mk(hscale(ring), rig.neck, mat, 'earring');              // small gold earrings
   }
   const nose = loft({ sides: 6, rings: [R(0, 0.28, 0.4, 0), R(-0.5, 0.44, 0.55, 0.1), R(-0.9, 0.48, 0.58, 0.24)], cap: { bottom: { h: 0.28, steps: 1 } } });
   const noseGeo = nose.patch(0, 6, () => S.face.texel(16, 18)); place(noseGeo, 0, 4.2, 3.3, 0.7, 0, 0); mk(hscale(noseGeo), rig.neck, mat, 'nose');
@@ -72,7 +72,7 @@ function makeGerda(outfit) {
   for (const [key, el, wr, side] of [['armL', 'elbowL', 'wristL', 1], ['armR', 'elbow', 'wrist', -1]]) {
     const up = loft({ sides: 8, rings: [R(1.7, 1.5, 1.45, 0, .9), R(0.2, 1.55, 1.5), R(-2.0, 1.38, 1.38), R(-4.3, 1.22, 1.22)], cap: { top: { h: 0.7, steps: 2, shade: 0.95 } } });
     mk(up.patch(0, 8, loftUV(up, S.arm)), rig[key], mat, 'upperArm');
-    mk(ball(1.22, 1.15, 1.22, 8, 3, S.fore.texel(3, 1)), rig[el], mat, 'elbowCap');
+    mk(ball(1.22, 1.15, 1.22, 6, 3, S.fore.texel(3, 1)), rig[el], mat, 'elbowCap');
     const fo = loft({ sides: 8, rings: [R(0.3, 1.2, 1.2), R(-1.4, 1.28, 1.25), R(-3.6, 0.92, 0.92), R(-4.2, 0.86, 0.92)] });
     mk(fo.patch(0, 8, loftUV(fo, S.fore)), rig[wr], mat, 'forearm');
     mk(P.handGeo(S, side > 0 ? S.handL : S.handR, side, { w: 0.92, t: 0.92 }), rig[wr], mat, 'hand');
@@ -89,7 +89,7 @@ function makeGerda(outfit) {
     const leg = rig[key];
     const th = loft({ sides: 8, rings: [R(0.4, 2.0, 2.05, 0, .9), R(-1.2, 2.0, 2.1, -0.05), R(-3.5, 1.75, 1.85), R(-5.4, 1.5, 1.6), R(-6.3, 1.45, 1.55)], cap: { top: { h: 1.0, steps: 2, shade: .85 } } });
     mk(th.patch(0, 8, loftUV(th, S.leg, { v0: 0, v1: 0.5 })), leg.thigh, mat, 'thigh');
-    mk(ball(1.55, 1.4, 1.6, 8, 3, S.leg.texel(5, 7)), leg.knee, mat, 'kneeCap');
+    mk(ball(1.55, 1.4, 1.6, 6, 3, S.leg.texel(5, 7)), leg.knee, mat, 'kneeCap');
     const sh = loft({ sides: 8, rings: [R(0.3, 1.5, 1.58), R(-1.5, 1.6, 1.8, -0.2), R(-3.7, 1.2, 1.3, -0.1), R(-5.4, 1.0, 1.08), R(-6.0, 1.08, 1.15)] });
     mk(sh.patch(0, 8, loftUV(sh, S.leg, { v0: 0.4, v1: 1 })), leg.shin, mat, 'shin');
     mk(P.footGeo(S.foot, FOOT), leg.foot, mat, 'foot');

@@ -1,4 +1,4 @@
-// Beanstalk — Across the lap: pose edits. Offsets (degrees, and units for position) laid on top of the procedural pose of each bone, per beat.
+// Polygon — Across the lap: pose edits. Offsets (degrees, and units for position) laid on top of the procedural pose of each bone, per beat.
 // Two sets, made with Jack at 100% and at 50% of his size; at any size between, the offsets are blended between them (so the contact sites
 // always work). 50% is the lowest size these poses work at.
 // Gerda's poses, for each implement in hand ('hand', 'paddle'): 'rest' (between smacks), 'raised' (the arm up, about to strike) and 'contactL' /

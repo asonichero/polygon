@@ -1,9 +1,7 @@
-// Beanstalk — Across the Lap. Gerda (the Giantess) is the giver and Jack the subject, in the blocky style of js/blocky.js; this is the
-// game's correction scene, driven by the pain model (js/pain.js), which turns each smack
-// (implement, strength, pace, the wait with the hand raised, the clothing over the skin, how tender the skin already is) into Jack's
-// distress, whose bands drive his reaction and face; the rear colours up with the smacks; trousers and drawers come up and down; and the
-// safe word ("Red") stops everything at once.
-// Everything is in skin pixels (1 unit = 1 pixel, a standing figure is 32 tall). Gerda sits on the chair facing +z; Jack lies face down
+// Polygon — Across the Lap. Gerda is the giver and Jack the subject, built as in js/poly.js; this is the correction scene, driven by the pain model (js/pain.js), which turns each smack
+// (implement, strength, pace, the wait with the hand raised, the clothing over the skin, how tender the skin already is) into Jack's distress, whose bands drive his reaction and face; the
+// rear colours up with the smacks; trousers and drawers come up and down; and the safe word ("Red") stops everything at once.
+// Everything is in model units (1 unit = 1 old skin pixel, a standing figure is 32 tall). Gerda sits on the chair facing +z; Jack lies face down
 // across her lap, hips over her right knee, head hanging off her left side, hands toward the floor.
 (function (root) {
 'use strict';

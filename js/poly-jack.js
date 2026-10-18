@@ -67,7 +67,7 @@ function makeJack() {
   for (const [key, el, wr, side] of [['armL', 'elbowL', 'wristL', 1], ['armR', 'elbow', 'wrist', -1]]) {
     const up = loft({ sides: 8, rings: [R(1.7, 1.72, 1.66, 0, .9), R(0.2, 1.78, 1.7), R(-2.0, 1.58, 1.58), R(-4.3, 1.38, 1.38)], cap: { top: { h: 0.75, steps: 2, shade: 0.95 } } });
     mk(up.patch(0, 8, loftUV(up, S.arm)), rig[key], mat, 'upperArm');
-    const eb = ball(1.38, 1.3, 1.38, 8, 4, S.fore.texel(3, 1)); mk(eb, rig[el], mat, 'elbowCap');
+    const eb = ball(1.38, 1.3, 1.38, 6, 3, S.fore.texel(3, 1)); mk(eb, rig[el], mat, 'elbowCap');
     const fo = loft({ sides: 8, rings: [R(0.3, 1.34, 1.34), R(-1.4, 1.42, 1.4), R(-3.6, 1.0, 1.0), R(-4.2, 0.95, 1.0)] });
     mk(fo.patch(0, 8, loftUV(fo, S.fore)), rig[wr], mat, 'forearm');
     mk(P.handGeo(S, side > 0 ? S.handL : S.handR, side), rig[wr], mat, 'hand');
@@ -80,7 +80,7 @@ function makeJack() {
     const leg = rig[key];
     const th = loft({ sides: 8, rings: [R(0.4, 2.05, 2.1, 0, .9), R(-1.2, 2.1, 2.2, -0.05), R(-3.5, 1.85, 1.95), R(-5.4, 1.58, 1.68), R(-6.3, 1.52, 1.62)], cap: { top: { h: 1.1, steps: 2, shade: .85 } } });
     mk(th.patch(0, 8, loftUV(th, S.thigh)), leg.thigh, mat, 'thigh');
-    mk(ball(1.62, 1.5, 1.7, 8, 4, S.thigh.texel(5, 22)), leg.knee, mat, 'kneeCap');
+    mk(ball(1.62, 1.5, 1.7, 6, 3, S.thigh.texel(5, 22)), leg.knee, mat, 'kneeCap');
     const sh = loft({ sides: 8, rings: [R(0.3, 1.6, 1.68), R(-1.5, 1.68, 1.92, -0.25), R(-3.7, 1.3, 1.42, -0.1), R(-5.4, 1.08, 1.15), R(-6.0, 1.15, 1.22)] });
     mk(sh.patch(0, 8, loftUV(sh, S.shin)), leg.shin, mat, 'shin');
     leg.boot = mk(P.footGeo(S.shoe, FOOT_BOOT), leg.foot, mat, 'boot'); leg.bare = mk(P.footGeo(S.foot, FOOT_BARE), leg.foot, mat, 'foot');

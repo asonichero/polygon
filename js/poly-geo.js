@@ -242,7 +242,7 @@ function ball(rx, ry, rz, sides, rings, uvOrFn, shade) {
 function box(w, h, d, uv) { const g = new THREE.BoxGeometry(w, h, d); const c = new Float32Array(g.attributes.position.count * 3).fill(1); g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return uv ? flatUV(g, uv) : g; }
 // A cylinder (tube) along y, one texel.
 function tube(r0, r1, h, sides, uv) { const g = new THREE.CylinderGeometry(r1, r0, h, sides || 8, 1); const c = new Float32Array(g.attributes.position.count * 3).fill(1); g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return uv ? flatUV(g, uv) : g; }
-const triCount = obj => { let n = 0; obj.traverse(o => { if (o.isMesh && o.visible) { const g = o.geometry; n += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } }); return Math.round(n); };
+const triCount = obj => { let n = 0; obj.traverseVisible(o => { if (o.isMesh) { const g = o.geometry; n += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } }); return Math.round(n); };
 
 Object.assign(Poly, { Atlas, Sheet, Grid, loft, loftUV, flatUV, paintShade, merge, place, ball, box, tube, triCount, mix, shadeHex, hex3, rgb, fixWinding });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -174,16 +174,16 @@ function lock(S, len, w, sweep, bend) {
 }
 // A hand: a mitten with a thumb, wide across (z) and thin through (x), the palm facing in (+-x). side +1 the left hand (the thumb toward the body, -x), -1 the right. o: { w, t } width and thickness scale.
 function handGeo(S, sheet, side, o) {
-  o = o || {}; const w = o.w || 1, t = o.t || 1, sx = o.sides || 8;
-  const palm = P.loft({ sides: sx, rings: [R(-3.7, 0.95 * t, 1.1 * w, 0), R(-4.6, 0.78 * t, 1.38 * w, 0), R(-5.7, 0.72 * t, 1.34 * w, 0.05), R(-6.4, 0.62 * t, 1.05 * w, 0.1)], cap: { bottom: { h: 0.45, steps: 2 } } });
-  const th = P.loft({ sides: 6, rings: [R(-4.2, 0.46 * t, 0.5 * w, 0), R(-5.0, 0.4 * t, 0.42 * w, 0.45 * w), R(-5.6, 0.34 * t, 0.34 * w, 0.85 * w)], cap: { bottom: { h: 0.4, steps: 1 } } });
-  const pg = palm.patch(0, sx, P.loftUV(palm, sheet)), tg = P.place(th.patch(0, 6, () => sheet.texel(2, 2)), -side * 0.7 * t, 0, 0.4, 0, 0, -side * 0.15);
+  o = o || {}; const w = o.w || 1, t = o.t || 1, sx = o.sides || 6;
+  const palm = P.loft({ sides: sx, rings: [R(-3.7, 0.95 * t, 1.1 * w, 0), R(-4.9, 0.78 * t, 1.38 * w, 0), R(-6.0, 0.66 * t, 1.2 * w, 0.08)], cap: { bottom: { h: 0.5, steps: 1 } } });
+  const th = P.loft({ sides: 6, rings: [R(-4.2, 0.46 * t, 0.5 * w, 0), R(-5.2, 0.38 * t, 0.4 * w, 0.55 * w)], cap: { bottom: { h: 0.5, steps: 1 } } });
+  const pg = palm.patch(0, sx, P.loftUV(palm, sheet)), tg = P.place(th.patch(0, 6, () => sheet.texel(2, 2)), -side * 0.7 * t, 0, 0.45, 0, 0, -side * 0.15);
   return P.merge([pg, tg]);
 }
 // A foot along +z in knee-frame coordinates (the floor at y = -6): heel, arch, ball, toes. rings: [y along the foot, half width, half height, centre height]. The sheet's middle columns are the sole.
 function footGeo(sheet, rings, sides) {
-  const g = P.loft({ sides: sides || 8, rings: rings.map(r => R(r[0], r[1], r[2], r[3])), cap: { top: { h: 0.55, steps: 2 }, bottom: { h: 0.5, steps: 1 } } });
-  const geo = g.patch(0, sides || 8, P.loftUV(g, sheet)); geo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2)); return geo;
+  const g = P.loft({ sides: sides || 6, rings: rings.map(r => R(r[0], r[1], r[2], r[3])), cap: { top: { h: 0.55, steps: 1 }, bottom: { h: 0.5, steps: 1 } } });
+  const geo = g.patch(0, sides || 6, P.loftUV(g, sheet)); geo.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2)); return geo;
 }
 
 Object.assign(P, { clamp, smooth, R, headRing, buildHead, hairline, buildHair, lock, handGeo, footGeo, POSES, skeleton, apply, setPose, step, stretchShins, seatFeet, materials, add, CHAIR, makeChair, BIRCH, makeBirch, woodTexture });

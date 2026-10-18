@@ -233,6 +233,7 @@ function stop(G, world) { if (world.cleanup) { world.cleanup(); world.cleanup = 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 async function talk(G, world, S, ui, hud) {
   const { jack, gerda } = world, ga = world.ga; S.talking = true; ui.show(false);
+  if (hud) { hud.hint.style.display = 'none'; hud.toast.style.opacity = 0; }
   const mine = G.mode, drone = G.drone; G.drone = null; G.mode = 'cutscene'; document.body.classList.add('cutscene'); G.skipping = false;
   const at = (o, y) => new V3(o.x, y, o.z), j = jack.root.position, g = gerda.root.position;
   const mid = new V3((j.x + g.x) / 2, 17, (j.z + g.z) / 2), perp = new V3(g.z - j.z, 0, j.x - g.x).normalize();

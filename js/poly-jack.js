@@ -193,13 +193,13 @@ function paintFace(F, ex, blush) {
   // mouth
   const m = { l: c.lip, k: c.lipDk, t: c.teeth, m: c.mouth, s: c.skinSh, g: c.tongue };
   const mouths = {
-    grin:    [{ x: 10, y: 24, rows: ['s.........s', '.kllllllllk.'.slice(0, 11), '..kkkkkkk..'] }],
-    tight:   [{ x: 11, y: 25, rows: ['kllllllk', '.kkkkkk.'] }],
+    grin:    [{ x: 10, y: 24, rows: ['k..........k', '.kk......kk.', '..kkllllkk..', '....kkkk....'] }],                       // a shallow smile, the corners up
+    tight:   [{ x: 11, y: 25, rows: ['.kkkkkkkk.', 'k........k'] }],                                                          // pressed, the corners down
     gritted: [{ x: 10, y: 24, rows: ['kkkkkkkkkkk', 'ttttktttttt', 'ttttktttttt', 'kkkkkkkkkkk'] }],
     open:    [{ x: 11, y: 23, rows: ['.kkkkkkkk.', 'kmmmmmmmmk', 'kmmmmmmmmk', 'kmmggggmmk', '.kmmggmmk.', '..kkkkkk..'] }],
-    toothy:  [{ x: 10, y: 24, rows: ['s.........s', 'kkkkkkkkkkk', 'kttttttttk.'.slice(0, 10) + 'k', '.ktttttttk.', '..kkkkkkk..'] }],
+    toothy:  [{ x: 10, y: 24, rows: ['s..........s', 'kkkkkkkkkkkk', 'kttttttttttk', '.kttttttttk.', '..kkkkkkkk..'] }],                // a wide grin, teeth showing
     small:   [{ x: 12, y: 25, rows: ['.kllllk.', '..kkkk..'] }],
-    smile:   [{ x: 10, y: 24, rows: ['s.........s', '.kk.....kk.', '..kllllk...'.slice(0, 11), '...kttk....'.slice(0, 11)] }],
+    smile:   [{ x: 11, y: 24, rows: ['s........s', '.kkllllkk.', '...kkkk...'] }],
   };
   for (const part of mouths[E.mouth]) F.grid(part.rows, m, part.x, part.y);
   if (blush) { F.rect(4, 19, 5, 2, c.blush); F.rect(23, 19, 5, 2, c.blush); }
@@ -213,8 +213,8 @@ function paintStatic(S, outfit) {
   S.trim.fill('#000'); [c.belt, c.buckle, '#f0d878', c.pouch, c.sole, '#d9b24a', '#241a12'].forEach((col, i) => S.trim.px(i, 0, col));
   // hair: brown strands running from the crown down, a sheen band across the top
   S.hair.fill(c.hair);
-  for (let x = 0; x < 32; x++) { let y = 0; while (y < 16) { const len = 2 + Math.floor(rnd() * 5), col = rnd() < 0.4 ? c.hairHi : rnd() < 0.5 ? c.hairDk : c.hair; S.hair.rect(x, y, 1, len, col); y += len; } }
-  S.hair.rect(0, 3, 32, 1, c.hairHi); S.hair.dither(0, 2, 32, 3, c.hairHi, 0.35); S.hair.rect(0, 13, 32, 3, c.hairDk);
+  for (let x = 0; x < 32; x++) { let y = 0; while (y < 16) { const len = 3 + Math.floor(rnd() * 5), r = rnd(), col = r < 0.3 ? c.hairHi : r < 0.5 ? c.hairDk : c.hair; S.hair.rect(x, y, 1, len, col); y += len; } }
+  S.hair.rect(0, 3, 32, 1, c.hairHi); S.hair.dither(0, 2, 32, 3, c.hairHi, 0.3); S.hair.rect(0, 13, 32, 3, c.hairDk);
   // shell: skin below the hairline, hair above it; ears and the nape
   S.shell.fill(c.skin);
   for (let x = 0; x < 40; x++) {

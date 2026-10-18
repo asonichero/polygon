@@ -52,7 +52,7 @@ function makeGerda(outfit) {
   parts.push(L(1.6, 0.8, 0.5, 0.2, 2.2, 6.4, 2.6, 0.4, -0.5, 0.2), L(1.5, 0.8, -0.5, 0.2, -2.2, 6.4, 2.6, 0.4, 0.5, -0.2));         // (a wisp at each temple)
   mk(hscale(merge(parts)), rig.neck, two, 'hair');
   rig.bun = mk(hscale(place(ball(2.2, 1.9, 2.0, 8, 4, (i, k) => S.bun.uv(k / 8, i / 4)), 0, 5.6, -4.6)), rig.neck, mat, 'bun');
-  rig.pin = mk(hscale(place(box(0.6, 0.6, 4.4, trim(4)), 2.0, 5.9, -4.8, 0, 0, 0.3)), rig.neck, mat, 'pin');
+  rig.pin = mk(hscale(place(box(0.45, 0.45, 3.0, trim(4)), 1.7, 6.3, -4.9, 0.0, 0.25, 0.35)), rig.neck, mat, 'pin');
 
   // ── Torso, bust, pelvis, the waist piece of the skirt ──
   const torsoG = loft({ sides: 12, rings: [R(2.2, 2.95, 2.0, 0, .8), R(4.2, 2.85, 2.0, 0, .9), R(6.6, 3.4, 2.25, 0.05), R(9.0, 3.85, 2.4, 0.1), R(10.8, 4.3, 2.2), R(11.9, 3.3, 1.85, -0.1), R(12.5, 1.8, 1.45, -0.1, .9)], cap: { top: { h: 0.4, steps: 1 } } });
@@ -199,7 +199,7 @@ function paintStatic(S, outfit) {
     T.rect(14, 0, 20, 6, c.blouse); T.rect(0, 0, 8, 6, c.blouse); T.rect(40, 0, 8, 6, c.blouse); T.rect(17, 0, 14, 3, c.skin); T.rect(19, 3, 10, 1, c.skin); T.rect(21, 0, 6, 1, c.skinHi);
     T.rect(14, 5, 20, 1, c.blouseSh);
     T.rect(0, 0, 48, 1, c.blouse); T.rect(0, 5, 48, 1, c.blouseSh);
-    T.rect(21, 6, 6, 20, c.plumDk); T.rect(23, 6, 2, 20, c.lace); for (let y = 6; y < 26; y += 3) { T.px(22, y, c.lace); T.px(25, y, c.lace); T.px(21, y + 1, c.lace); T.px(26, y + 1, c.lace); }
+    T.rect(21, 6, 6, 20, c.plumDk); for (let y = 7; y < 25; y += 4) { T.px(22, y, c.lace); T.px(25, y, c.lace); T.px(23, y + 1, c.lace); T.px(24, y + 1, c.lace); T.px(22, y + 2, c.lace); T.px(25, y + 2, c.lace); }
     T.rect(10, 7, 4, 8, c.plumHi); T.rect(34, 7, 4, 8, c.plumHi);           // the bust's sheen
     T.rect(0, 6, 5, 20, c.plumDk); T.rect(43, 6, 5, 20, c.plumDk); T.rect(0, 6, 48, 1, c.plumDk);    // the back and the sides darker
     T.wrap(-2, 6, 4, 20, c.plumDk);                                 // (the back's seam runs across the sheet's edges)
@@ -210,13 +210,15 @@ function paintStatic(S, outfit) {
     A.fill(c.blouse); A.rect(0, 15, 32, 2, c.blouseSh); A.rect(0, 17, 32, 7, c.skin); A.rect(0, 17, 32, 1, c.skinSh); A.rect(0, 0, 32, 2, c.blouseSh); A.noise(2221, 3);
     Fo.fill(c.skin); Fo.rect(0, 0, 32, 3, c.skinHi); Fo.rect(0, 20, 32, 4, c.skinSh); for (let i = 0; i < 14; i++) Fo.px(Math.floor(rnd() * 32), 2 + Math.floor(rnd() * 14), c.skinSh); Fo.noise(2223, 3);
     // the waist piece (7 units of bell from the waist to well below the hips): the apron's tie round the top, its panel down the front with a pocket, the knot and tails at the back
-    W.fill(c.plum); W.rect(0, 0, 48, 4, c.apron); W.rect(0, 3, 48, 1, c.apronSh);
+    W.fill(c.plum); for (let x = 2; x < 46; x += 6) W.px(x, 7 + (x % 5), c.plumHi);
+    W.rect(0, 0, 48, 4, c.apron); W.rect(0, 3, 48, 1, c.apronSh);
     W.rect(18, 4, 12, 12, c.apron); W.rect(18, 4, 12, 1, c.apronSh); W.rect(20, 8, 8, 5, c.pocket); W.rect(20, 8, 8, 1, c.apronSh); W.px(20, 12, c.apronSh); W.px(27, 12, c.apronSh);
     W.wrap(-3, 0, 6, 16, c.apron); W.wrap(-1, 0, 2, 6, c.apronSh); W.wrap(-4, 4, 2, 10, c.apron); W.wrap(2, 4, 2, 10, c.apron);
-    W.rect(0, 15, 48, 1, c.plumDk); for (let x = 2; x < 46; x += 6) W.px(x, 7 + (x % 5), c.plumHi); W.noise(2227, 3);
+    W.rect(0, 15, 48, 1, c.plumDk); W.noise(2227, 3);
     Pv.fill(c.plum); Pv.noise(2229, 3);
     // thigh skirt: plum, the apron's panel on the inside of the front, down to a gold hem at the knee
-    Th.fill(c.plum); Th.rect(9, 0, 8, 13, c.apron); Th.rect(9, 0, 8, 1, c.apronSh); Th.rect(9, 13, 8, 1, c.trimGold); Th.rect(0, 15, 32, 1, c.plumDk); for (let x = 1; x < 32; x += 5) Th.px(x, 3 + (x % 7), c.plumHi); Th.noise(2231, 3);
+    Th.fill(c.plum); for (let x = 1; x < 32; x += 5) Th.px(x, 3 + (x % 7), c.plumHi);
+    Th.rect(9, 0, 8, 13, c.apron); Th.rect(9, 0, 8, 1, c.apronSh); Th.rect(9, 13, 8, 1, c.trimGold); Th.rect(0, 15, 32, 1, c.plumDk); Th.noise(2231, 3);
     // shin skirt: plum, a darker band, a gold trim at the hem
     Sh.fill(c.plum); Sh.rect(0, 15, 32, 3, c.plumDk); Sh.rect(0, 18, 32, 2, c.trimGold); for (let x = 2; x < 32; x += 5) Sh.px(x, 4 + (x % 6), c.plumHi); Sh.noise(2233, 3);
   } else {
@@ -225,7 +227,7 @@ function paintStatic(S, outfit) {
     T.rect(14, 0, 20, 7, F.cream); T.rect(17, 0, 14, 3, c.skin); T.rect(19, 3, 10, 1, c.skin); T.rect(21, 0, 6, 1, c.skinHi);   // a cream embroidered neckline
     for (let x = 14; x < 34; x += 2) { T.px(x, 6, F.creamDk); T.px(x + 1, 7, F.creamDk); }
     T.rect(14, 7, 20, 1, F.lavDk);
-    for (let y = 9; y < 24; y += 3) { T.px(23, y, F.cream); T.px(24, y + 1, F.cream); T.px(22, y + 1, F.lavHi); T.px(25, y, F.lavHi); }
+    for (let y = 9; y < 24; y += 4) { T.px(23, y, F.cream); T.px(24, y, F.cream); T.px(22, y + 1, F.lavHi); T.px(25, y + 1, F.lavHi); }
     T.rect(10, 8, 4, 9, F.lavHi); T.rect(34, 8, 4, 9, F.lavHi); T.rect(0, 8, 5, 18, F.lavDk); T.rect(43, 8, 5, 18, F.lavDk);
     T.rect(0, 26, 48, 6, F.cream); for (let x = 0; x < 48; x += 2) { T.px(x, 27, F.creamDk); T.px(x + 1, 29, F.creamDk); } T.rect(0, 31, 48, 1, F.lavDk);
     A.fill(F.lav); A.rect(0, 0, 32, 2, F.lavDk); A.rect(0, 20, 32, 4, F.lavDk); for (let x = 0; x < 32; x += 6) A.px(x, 8 + (x % 5), F.lavHi); A.noise(2241, 3);

@@ -61,7 +61,7 @@
   <div class="sub" style="margin-top:4px">Clothing over the rear cushions the sting, not the ache.</div>
   <h3>Jack's size</h3>
   <div class="stepper"><input id="size" type="range" min="50" max="100" value="100" style="flex:1"><span class="v" id="sizeV">100%</span></div>
-  <div class="sub">He shrinks on arrival, then regains his size level by level. (50% is the lowest this position works at.)</div>
+  <div class="sub">The contact sites are on his body, so they shrink with him. (50% is the lowest this position works at.)</div>
   <h3>Gerda's face</h3>
   <div class="btns" id="giver"></div>
   <h3>Wardrobe</h3>
@@ -69,6 +69,8 @@
   <div class="sub" style="margin-top:6px">Jack</div><div class="btns" id="wardJ"></div>
   <h3>Camera</h3>
   <div class="btns" id="cams"></div>
+  <h3>Picture</h3>
+  <div class="btns"><select id="pLines"><option value="0">Native</option><option value="480">480 lines</option><option value="360">360 lines</option><option value="240">240 lines</option></select><button id="pDither" class="on">Dither</button><button id="pSnap">Wobble</button><button id="pSmooth">Smooth</button></div>
   <h3>Scene</h3>
   <div class="btns"><button id="clear">Clear marks</button><button id="snd" class="on">Sound</button><button id="again">Start again</button></div>
   <div id="end" hidden></div>
@@ -155,6 +157,13 @@
       $(k === 'pace' ? 'paceV' : 'strV').textContent = st[k].toFixed(1) + '×';
     };
   });
+  // the picture: the retro pass's resolution and colour treatment (js/retro.js)
+  (function () {
+    var R = L.renderer.retro; if (!R) return; var sel = $('pLines'); sel.value = String(R.lines);
+    sel.style.cssText = 'background:#2e2e3a;color:#e8e6e3;border:1px solid #454555;border-radius:4px;padding:5px;font-size:12px';
+    sel.onchange = function () { R.set({ lines: +sel.value }); };
+    [['pDither', 'dither'], ['pSnap', 'snap'], ['pSmooth', 'smooth']].forEach(function (p) { var b = $(p[0]); b.classList.toggle('on', !!R[p[1]]); b.onclick = function () { var o = {}; o[p[1]] = !R[p[1]]; R.set(o); b.classList.toggle('on', !!R[p[1]]); }; });
+  })();
   addEventListener('keydown', function (e) { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); L.smack(); } });
   var LINES = ['Jack takes it with a grin.', 'He flinches, but keeps his grin.', 'He squirms, the grin gone.', 'He kicks and yelps, close to the edge.', 'He is past the edge now: begging, and most receptive.', 'Too harsh.'];
   L.on(function (type, d) {

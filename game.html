@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#131820">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Consequence">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Climbing Toward Consequence</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e13; color: #ece8df; font-family: Georgia, 'Times New Roman', serif; touch-action: none; -webkit-user-select: none; user-select: none; }
+  #stage { position: fixed; inset: 0; } #stage canvas { display: block; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 40; }
+  .screen { position: fixed; inset: 0; display: none; z-index: 30; }
+  .screen.on { display: flex; }
+  #notice { background: rgba(8,10,14,0.94); align-items: center; justify-content: center; }
+  .card { max-width: 560px; width: min(560px, 92vw); padding: 22px 26px; background: rgba(18,20,26,0.92); border: 1px solid #3a3d48; border-radius: 10px; font-size: 15px; line-height: 1.55; }
+  .card h2 { margin: 0 0 8px; font-size: 20px; color: #e6c46a; font-weight: normal; letter-spacing: .04em; }
+  button, .btn { font: inherit; background: #2a2d3a; color: #ece8df; border: 1px solid #5a5f72; border-radius: 6px; padding: 10px 16px; font-size: 16px; cursor: pointer; margin: 8px 8px 0 0; text-decoration: none; display: inline-block; }
+  button:hover, .btn:hover { background: #3a3f52; } button.primary { background: #6b5a2a; border-color: #c9a84c; } button:disabled { opacity: .4; cursor: default; }
+  #title { flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; padding-left: 6vw; background: linear-gradient(90deg, rgba(8,10,14,0.72) 0%, rgba(8,10,14,0.35) 45%, rgba(8,10,14,0) 75%); }
+  #title h1 { margin: 0; font-size: clamp(30px, 5.4vw, 64px); line-height: 1.1; max-width: 8em; font-weight: normal; letter-spacing: .08em; color: #f3e4b0; text-shadow: 0 3px 0 #5a4418, 0 0 40px rgba(0,0,0,.7); text-transform: uppercase; }
+  #title .sub { margin: 6px 0 28px; font-size: clamp(14px, 2.4vw, 20px); color: #e4dcc4; text-shadow: 0 1px 6px #000; font-style: italic; }
+  #menu { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  #menu button { min-width: 230px; margin: 0; padding: 12px 20px; font-size: 18px; background: rgba(20,22,30,0.82); }
+  #chCard { position: fixed; inset: 0; z-index: 90; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; opacity: 0; transition: opacity 1.2s ease; text-align: center; font-family: Georgia, 'Times New Roman', serif; color: #ece8df; cursor: pointer; }
+  #chCard #chNum { font-size: clamp(12px, 2.2vw, 18px); letter-spacing: .5em; text-transform: uppercase; color: #c9b87a; padding-left: .5em; }
+  #chCard #chTitle { font-size: clamp(28px, 6.4vw, 62px); letter-spacing: .06em; font-weight: normal; max-width: 90vw; }
+  #chCard #chRule { width: 64px; height: 1px; background: #8a7a4a; }
+  #dev { position: fixed; left: 12px; bottom: 10px; font-size: 12px; opacity: .65; z-index: 31; } #dev a { color: #c9b87a; margin-right: 12px; } #dev select { background: #1a1d26; color: #c9b87a; border: 1px solid #4a4d58; border-radius: 4px; font-size: 12px; padding: 2px 4px; }
+  #ver { position: fixed; right: 12px; bottom: 10px; font-size: 14px; font-weight: bold; letter-spacing: .04em; color: #f3e4b0; background: rgba(8,10,14,0.78); border: 1px solid #5a5f72; border-radius: 6px; padding: 4px 10px; opacity: 1; z-index: 31; }
+  #settings, #endcard { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 9px 0; font-size: 15px; }
+  .row.stack { flex-direction: column; align-items: stretch; gap: 2px; margin: 12px 0; } .row.stack input[type=range] { width: 100%; margin: 0; }
+  .card.narrow { max-width: 340px; width: min(340px, 90vw); max-height: 92vh; overflow-y: auto; }
+  #subs { position: fixed; left: 50%; bottom: 5vh; transform: translateX(-50%); width: min(780px, 92vw); display: none; z-index: 41; background: rgba(8,8,12,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 12px 18px 14px; font-size: clamp(15px, 2.2vw, 20px); line-height: 1.5; }
+  @media (pointer: coarse) { body:not(.cutscene) #subs { left: 170px; right: 200px; width: auto; transform: none; bottom: 3vh; pointer-events: none; } }       /* (while playing, a line sits between the thumbs and never covers a button) */
+  #subWho { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; } #subText { min-height: 1.5em; }
+  #skip { position: fixed; right: 12px; top: 72px; z-index: 42; display: none; margin: 0; padding: 0; width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); background: rgba(20,22,30,0.72); color: #fff; flex-direction: column; align-items: center; justify-content: center; font: 600 10.5px/1 Georgia, serif; -webkit-tap-highlight-color: transparent; } body.cutscene #skip { display: flex; }
+  #skip svg { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 2.1; stroke-linejoin: round; stroke-linecap: round; } #skip span { margin-top: 2px; text-shadow: 0 1px 3px #000; } #skip:hover { background: rgba(60,66,90,0.95); }
+  body.cutscene #tui { display: none !important; }
+  @media (max-height: 420px) { #menuBtn { width: 48px; height: 48px; top: 8px; } #skip { width: 48px; height: 48px; top: 66px; } }
+  #tapHint { position: fixed; left: 50%; bottom: 1.6vh; transform: translateX(-50%); font-size: 12px; opacity: .55; z-index: 19; display: none; } body.cutscene #tapHint { display: block; }
+  #subChoices { display: none; margin-top: 8px; } #subChoices .choice { display: block; width: 100%; text-align: left; margin: 6px 0 0; padding: 10px 14px; font-size: clamp(14px, 1.9vw, 17px); background: rgba(40,44,56,0.9); }
+  #subGate { display: none; margin: 10px 0 0; float: right; font-size: 18px; padding: 10px 30px; }
+  /* Chapter One's HUD (Market Day) */
+  .mhud { position: fixed; inset: 0; pointer-events: none; z-index: 12; } 
+  .mobj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); max-width: 80vw; text-align: center; }
+  .mpace { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); font-size: 13px; opacity: .85; text-shadow: 0 1px 4px #000; } .mpace.warn { color: #f0a090; opacity: 1; }
+  .mtrust { position: absolute; left: 14px; top: 12px; width: min(230px, 40vw); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  .mtb { height: 10px; background: #1c1f27; border: 1px solid #454a58; border-radius: 4px; overflow: hidden; margin-top: 4px; } .mtb i { display: block; height: 100%; width: 90%; background: linear-gradient(90deg, #5a8a4a, #c9a84c); } .mtb i.full { background: #7fd070; }
+  .mhint { position: absolute; left: 50%; bottom: 18vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 15px; display: none; }
+  .mtoast { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; max-width: 86vw; text-align: center; opacity: 0; transition: opacity .4s; }
+  .touchonly { display: none; } @media (pointer: coarse) { .touchonly { display: block; } }
+  #dbgBar { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 36; display: none; align-items: center; gap: 4px; background: rgba(10,12,16,.82); border: 1px solid #4a4d58; border-radius: 8px; padding: 3px 8px; font-size: 12px; } body.dbg #dbgBar { display: flex; }
+  #dbgBar button { margin: 0; padding: 4px 11px; font-size: 14px; } #dbgInfo { opacity: .7; margin-left: 6px; min-width: 64px; }
+  #menuBtn { position: fixed; right: 12px; top: 10px; z-index: 37; margin: 0; padding: 0; width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); background: rgba(20,22,30,0.72); display: none; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; } #menuBtn svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; } #menuBtn:hover { background: rgba(60,66,90,0.95); } body.inplay #menuBtn { display: flex; } body.pm #menuBtn { display: none; }
+  #pmenu { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; z-index: 50; } #pmenu #bReset { display: none; } #pmenu .card button { display: block; width: 100%; margin: 10px 0 0; }
+  #titleShot { position: fixed; inset: 0; z-index: 29; display: none; background-size: cover; background-position: center; } body.titlePic #titleShot { display: block; }
+  body.inplay #ver { display: none; }
+  body.playing #tapHint, body.playing #skip, body.playing #ver { display: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="fade"></div>
+
+<div id="notice" class="screen">
+  <div class="card">
+    <h2>Before you begin</h2>
+    <p>Climbing Toward Consequence is an adult game. It contains mature themes, including consensual adult discipline (spanking), shown between adult characters in a fairy-tale setting, with some nudity from the waist down in those scenes.</p>
+    <p>Every scene can be stopped at once with the safe word, <b>Red</b>. Nothing in the game is held against you for using it.</p>
+    <p>You must be 18 or over to play.</p>
+    <button class="primary" id="noticeYes">I am 18 or over &mdash; continue</button>
+    <button id="noticeNo">Leave</button>
+  </div>
+</div>
+
+<div id="titleShot"></div>
+<div id="title" class="screen">
+  <h1>Climbing Toward Consequence</h1>
+  <div class="sub">Jack and the Beanstalk, for grown-ups</div>
+  <div id="menu">
+    <button id="bNew" class="primary">New Game</button>
+    <button id="bContinue">Continue</button>
+    <button id="bSettings">Settings</button>
+  </div>
+</div>
+<div id="chCard"><div id="chNum"></div><div id="chRule"></div><div id="chTitle"></div></div>
+<div id="dev" class="screen-dev"><select id="levelSel" style="display:none" title="Level select (does not touch your save)"><option value="">Level select&hellip;</option><option value="opening">Prologue: the opening</option><option value="market">Chapter One: Market Day &mdash; the cow</option><option value="road">Chapter One: the market road</option><option value="cart">Chapter One: the Peddler's cart</option><option value="nightH">Chapter One: night, humble</option><option value="nightC">Chapter One: night, cheeky</option><option value="nightB">Chapter One: night, brash (the birch)</option><option value="corrH">Chapter One: the correction, humble</option><option value="corrC">Chapter One: the correction, cheeky</option><option value="corrB">Chapter One: the correction, brash (the birch)</option><option value="gardenH">Chapter One: planting, humble</option><option value="gardenC">Chapter One: planting, cheeky</option><option value="gardenB">Chapter One: planting, brash</option><option value="ch3">Chapter Two: The Climb &mdash; waking, through to the end</option><option value="ch3d">Chapter Two: dress and the knife</option><option value="climb">Chapter Two: the climb itself</option><option value="meadow">Chapter Two: the cloud meadow</option><option value="castlehall">Chapter Two: inside the castle (the hall)</option><option value="castlecatch">Chapter Two: Gerda catches Jack (the capture)</option><option value="castle">Test: explore the castle</option><option value="ch3open">Chapter Three: the kitchen (the box on the table)</option><option value="ch3nursery">Chapter Three: the nursery</option><option value="ch3disc">Chapter Three: the nursery correction</option><option value="ch3dress">Chapter Three: dressed at the table</option><option value="ch3chores">Ch3: the hen chores</option><option value="ch3bath">Ch3: bath time</option><option value="cards">Test: the chapter title cards</option></select></div>
+<div id="ver">v0.4.1 &middot; build 222 &middot; 2026-10-14</div>
+
+<div id="settings" class="screen">
+  <div class="card narrow">
+    <h2>Settings</h2>
+    <div class="row stack"><span>Master volume</span><input type="range" id="vMaster" min="0" max="100"></div>
+    <div class="row stack"><span>Music</span><input type="range" id="vMusic" min="0" max="100"></div>
+    <div class="row stack"><span>Sound effects</span><input type="range" id="vSfx" min="0" max="100"></div>
+    <div class="row stack"><span>Voices</span><input type="range" id="vVoice" min="0" max="100"></div>
+    <div class="row stack"><span>Dialogue speed</span><input type="range" id="vSpeed" min="50" max="200"></div>
+    <div class="row"><span>Advance dialogue automatically</span><input type="checkbox" id="cAuto"></div>
+    <div class="row"><span>Subtitles</span><input type="checkbox" id="cSubs"></div>
+    <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In any correction scene the Red button ends it at once, with nothing held against you.</p>
+    <button id="bReset">Delete saved game</button><button class="primary" id="bBack">Back</button>
+  </div>
+</div>
+
+<div id="pmenu" class="screen">
+  <div class="card narrow" id="pmMain">
+    <h2>Paused</h2>
+    <button class="primary" id="pmResume">Resume</button>
+    <button id="pmSettings">Settings</button>
+    <button id="pmTitle">Return to title</button>
+  </div>
+</div>
+
+<div id="endcard" class="screen">
+  <div class="card" style="text-align:center">
+    <h2 id="endTitle">Chapter One &mdash; Market Day</h2>
+    <p id="endText">Jack has a cow to sell in the morning.</p>
+    <p style="opacity:.7;font-size:14px">To be continued. Your game is saved at this point.</p>
+    <button class="primary" id="bTitle">Back to the title</button>
+  </div>
+</div>
+
+<div id="subs"><div id="subWho"></div><div id="subText"></div><button id="subGate" class="primary">Continue</button><div id="subChoices"></div></div>
+<div id="tapHint">tap or press space to move on</div>
+<button id="skip" title="Skip scene"><svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7z"/><path d="M16 5v14"/><path d="M19 5v14"/></svg><span>Skip</span></button>
+<button id="menuBtn" title="Menu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+<div id="dbgBar"><button id="dbgBack" title="Back to the start of the previous beat (,)">⏮</button><button id="dbgPlay" title="Pause / play (P)">❚❚</button><button id="dbgFwd" title="On to the next beat (.)">⏭</button><span id="dbgInfo"></span></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/blocky.js"></script>
+<script src="js/cast.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/farm-layout.js"></script>
+<script src="js/farm.js"></script>
+<script src="js/game.js"></script>
+<script src="js/opening.js"></script>
+<script src="js/market.js"></script>
+<script src="js/touchui.js"></script>
+<script src="js/road.js"></script>
+<script src="js/pain.js"></script>
+<script src="js/lap-poses.js"></script>
+<script src="js/lap.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/night.js"></script>
+<script src="js/correction.js"></script>
+<script src="js/garden.js"></script>
+<script src="js/chapter3.js"></script>
+<script src="js/climb.js"></script>
+<script src="js/meadow.js"></script>
+<script src="js/castle.js"></script>
+<script src="js/castle-layout.js"></script>
+<script src="js/gerda-pose.js"></script>
+<script src="js/gerda-pose-half.js"></script>
+<script src="js/capture-cams.js"></script>
+<script src="js/castlewalk.js"></script>
+<script src="js/debuglib.js"></script>
+<script src="js/menus.js"></script>
+</body>
+</html>

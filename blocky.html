@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beanstalk — Blocky models</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14181f; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; color: #e8e6e3; }
+  #view { position: fixed; inset: 0 300px 0 0; }
+  #panel { position: fixed; top: 0; right: 0; bottom: 0; width: 300px; box-sizing: border-box; padding: 14px 16px; overflow-y: auto; background: rgba(20,20,26,0.96); border-left: 1px solid #2c2c36; font-size: 13px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #9aa0ac; margin: 16px 0 6px; border-bottom: 1px solid #2c2c36; padding-bottom: 3px; }
+  .sub { color: #8a8a96; font-size: 11px; line-height: 1.5; }
+  .btns { display: flex; flex-wrap: wrap; gap: 4px; }
+  button { background: #2e2e3a; color: #e8e6e3; border: 1px solid #454555; border-radius: 4px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  button:hover { background: #3a3a48; }
+  button.on { background: #6b5a2a; border-color: #c9a84c; color: #fff; }
+  .row label { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .row input[type=range] { width: 100%; margin: 0; }
+  .skins { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .skins figure { margin: 0; font-size: 11px; color: #8a8a96; text-align: center; }
+  .skins canvas { width: 96px; height: 96px; image-rendering: pixelated; background: #222 repeating-conic-gradient(#2a2a30 0 25%, #1e1e24 0 50%) 0 0/16px 16px; border: 1px solid #454555; display: block; }
+  @media (max-width: 700px) { #view { right: 0; bottom: 230px; } #panel { top: auto; width: 100%; height: 230px; border-left: 0; border-top: 1px solid #2c2c36; } }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<aside id="panel">
+  <h1>Blocky models</h1>
+  <div class="sub">Jack (21) and Gerda (late 30s), Minecraft-style: head, torso, arm and leg blocks, with the knee bend appearing only when seated. Drag to orbit, scroll to zoom, right-drag to pan.</div>
+  <h3>Jack</h3>
+  <div class="btns" id="jackPose"></div>
+  <h3>Gerda</h3>
+  <div class="btns" id="gerdaPose"></div>
+  <h3>Both</h3>
+  <div class="btns" id="bothPose"></div>
+  <h3>Wardrobe</h3>
+  <div class="sub">Gerda</div><div class="btns" id="wardG"></div>
+  <div class="sub" style="margin-top:6px">Jack</div><div class="btns" id="wardJ"></div>
+  <div class="sub" style="margin-top:6px">Jack's mother</div><div class="btns" id="wardM"></div>
+  <div class="sub" style="margin-top:6px">The peddler</div><div class="btns" id="wardP"></div>
+  <div class="sub" style="margin-top:6px">The merchant: one outfit (his cloak twinkles)</div>
+  <h3>Jack's size</h3>
+  <div class="row"><label><span>Scale</span><span id="sizeOut">100%</span></label><input id="size" type="range" min="10" max="100" value="100"></div>
+  <div class="sub">The premise: Jack shrinks on arrival, then regains his size level by level.</div>
+  <h3>View</h3>
+  <div class="btns"><button id="spin">Turntable</button><button id="home">Reset camera</button><button id="face">Face close-up</button></div>
+  <h3>Scenes</h3>
+  <div class="btns"><a href="lap.html" style="color:#c9a84c">Across the lap →</a></div>
+  <h3>Skins</h3>
+  <div class="sub">64×64, Minecraft-style layout with 3×3 arms (so not a drop-in Minecraft skin). The knee split is only in the model, not the skin.</div>
+  <div class="skins" id="skins"></div>
+</aside>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/blocky.js"></script>
+<script src="js/cast.js"></script>
+<script>
+(function () {
+  var B = window.Blocky, view = document.getElementById('view');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  view.appendChild(renderer.domElement);
+  var scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140, 300);
+  var camera = new THREE.PerspectiveCamera(36, 1, 1, 600);
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.minDistance = 20; controls.maxDistance = 260; controls.maxPolarAngle = Math.PI * 0.49;
+  function home() { camera.position.set(30, 40, 150); controls.target.set(2, 16, 0); }
+  home();
+
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30283a, 0.62));
+  var sun = new THREE.DirectionalLight(0xfff0d8, 0.62); sun.position.set(40, 80, 60); scene.add(sun);
+
+  // A checkered floor of 8-pixel flagstones.
+  var fc = document.createElement('canvas'); fc.width = fc.height = 32; var fx = fc.getContext('2d');
+  fx.fillStyle = '#3a3f4a'; fx.fillRect(0, 0, 32, 32); fx.fillStyle = '#343944'; fx.fillRect(0, 0, 16, 16); fx.fillRect(16, 16, 16, 16);
+  fx.fillStyle = '#2a2e38'; fx.fillRect(0, 15, 32, 1); fx.fillRect(15, 0, 1, 32);
+  var ft = new THREE.CanvasTexture(fc); ft.magFilter = THREE.NearestFilter; ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(16, 16); ft.encoding = THREE.sRGBEncoding;
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), new THREE.MeshLambertMaterial({ map: ft }));
+  floor.rotation.x = -Math.PI / 2; scene.add(floor);
+
+  function stool() {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 10), new THREE.MeshLambertMaterial({ color: new THREE.Color(0x5a4028).convertSRGBToLinear() }));
+    m.position.set(0, 2, 1); return m;
+  }
+  var C = window.Cast;
+  var cast = [
+    { key: 'jack', rig: B.makeJack(), x: -48 },
+    { key: 'gerda', rig: B.makeGerda(), x: -24 },
+    { key: 'mother', rig: C.makeMother(), x: 0 },
+    { key: 'peddler', rig: C.makePeddler(), x: 24 },
+    { key: 'merchant', rig: C.makeMerchant(), x: 50 },
+  ];
+  cast.forEach(function (c) {
+    c.holder = new THREE.Group(); c.holder.position.x = c.x; c.holder.add(c.rig.root);
+    c.stool = stool(); c.stool.visible = false; c.holder.add(c.stool); scene.add(c.holder);
+  });
+
+  function pose(c, name) { B.setPose(c.rig, name); c.stool.visible = name === 'sit'; mark(); }
+  var groups = { jackPose: [cast[0]], gerdaPose: [cast[1]], bothPose: cast };
+  function mark() {
+    ['jackPose', 'gerdaPose'].forEach(function (id) {
+      var c = groups[id][0];
+      document.querySelectorAll('#' + id + ' button').forEach(function (b) { b.classList.toggle('on', b.dataset.pose === c.rig.pose); });
+    });
+    document.querySelectorAll('#bothPose button').forEach(function (b) { b.classList.toggle('on', cast.every(function (c) { return c.rig.pose === b.dataset.pose; })); });
+  }
+  ['jackPose', 'gerdaPose', 'bothPose'].forEach(function (id) {
+    var box = document.getElementById(id);
+    [['stand', 'Standing'], ['sit', 'Sitting']].forEach(function (p) {
+      var b = document.createElement('button'); b.textContent = p[1]; b.dataset.pose = p[0];
+      b.onclick = function () { groups[id].forEach(function (c) { pose(c, p[0]); }); };
+      box.appendChild(b);
+    });
+  });
+  cast.forEach(function (c) { B.setPose(c.rig, 'stand'); }); mark();
+
+  B.OUTFITS.gerda.forEach(function (n, i) {
+    var bt = document.createElement('button'); bt.textContent = n; bt.className = i ? '' : 'on';
+    bt.onclick = function () { B.paintGerdaInto(cast[1].rig.skin, n); cast[1].rig.tex.needsUpdate = true; document.querySelectorAll('#wardG button').forEach(function (x) { x.classList.toggle('on', x === bt); }); };
+    document.getElementById('wardG').appendChild(bt);
+  });
+  B.OUTFITS.jack.forEach(function (n, i) {
+    var bt = document.createElement('button'); bt.textContent = n; bt.className = i ? '' : 'on';
+    bt.onclick = function () { B.paintJackInto(cast[0].rig.skin, { outfit: n }); cast[0].rig.tex.needsUpdate = true; document.querySelectorAll('#wardJ button').forEach(function (x) { x.classList.toggle('on', x === bt); }); };
+    document.getElementById('wardJ').appendChild(bt);
+  });
+  // The supporting cast: the mother's expression, the peddler's disguise.
+  [['Neutral', 0], ['Disapproving', 1]].forEach(function (e, i) {
+    var bt = document.createElement('button'); bt.textContent = e[0]; bt.className = i ? '' : 'on';
+    bt.onclick = function () { cast[2].rig.setExpr(e[1]); document.querySelectorAll('#wardM button').forEach(function (x) { x.classList.toggle('on', x === bt); }); };
+    document.getElementById('wardM').appendChild(bt);
+  });
+  [['Hooded cloak', true], ['Gerda, unmasked', false]].forEach(function (e, i) {
+    var bt = document.createElement('button'); bt.textContent = e[0]; bt.className = i ? '' : 'on';
+    bt.onclick = function () { if (e[1]) cast[3].rig.mask(); else cast[3].rig.unmask(); document.querySelectorAll('#wardP button').forEach(function (x) { x.classList.toggle('on', x === bt); }); };
+    document.getElementById('wardP').appendChild(bt);
+  });
+  var size = document.getElementById('size'), out = document.getElementById('sizeOut');
+  // Jack's full size (100%) is 95% of the model's own scale.
+  cast[0].rig.root.scale.setScalar(0.95);
+  size.oninput = function () { var s = size.value / 100; cast[0].rig.root.scale.setScalar(s * 0.95); out.textContent = size.value + '%'; };
+  var spin = document.getElementById('spin');
+  spin.onclick = function () { controls.autoRotate = !controls.autoRotate; spin.classList.toggle('on', controls.autoRotate); };
+  document.getElementById('home').onclick = home;
+  document.getElementById('face').onclick = function () { var c = cast[1].rig.root.parent.position; camera.position.set(c.x - 10, 28, 38); controls.target.set(c.x, 26, 0); };
+
+  var skins = document.getElementById('skins');
+  cast.forEach(function (c) {
+    var f = document.createElement('figure'), cv = c.rig.skin.canvas.cloneNode();
+    cv.getContext('2d').drawImage(c.rig.skin.canvas, 0, 0);
+    var a = document.createElement('a'); a.href = c.rig.skin.canvas.toDataURL('image/png'); a.download = c.key + '-skin.png'; a.style.color = '#c9a84c'; a.textContent = 'Download ' + c.key + '.png';
+    f.appendChild(cv); f.appendChild(a); skins.appendChild(f);
+  });
+
+  function resize() { var w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  window.addEventListener('resize', resize); resize();
+  var last = performance.now();
+  (function loop(t) {
+    var dt = Math.min(0.05, (t - last) / 1000); last = t;
+    cast.forEach(function (c) { B.step(c.rig, dt); if (c.rig.tick) c.rig.tick(dt); });
+    controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop);
+  })(last);
+  window.__blocky = { cast: cast, camera: camera, controls: controls, pose: pose };
+})();
+</script>
+<script src="js/buildbadge.js"></script>
+</body>
+</html>

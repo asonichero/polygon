@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#131820">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Golden Hen">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Beanstalk — The Golden Hen</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #131820; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; color: #ece8df; }
+  .stage { position: fixed; inset: 0; }
+  #lap { display: none; }
+  .panel { position: fixed; background: rgba(20,22,28,0.86); border: 1px solid #3a3d48; border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.45; }
+  #hud { top: 12px; left: 12px; width: 250px; }
+  #help { top: 12px; right: 12px; width: 230px; font-size: 12px; color: #b5b7c2; }
+  #help b { color: #e6c46a; }
+  #actions { right: 12px; bottom: 12px; text-align: right; }
+  #actions button.on { background: #6b5a2a; border-color: #c9a84c; }
+  #feed { left: 12px; bottom: 12px; width: 330px; font-size: 12px; }
+  #feed div { padding: 1px 0; color: #c9ccd6; } #feed div.bad { color: #f09a8a; } #feed div.good { color: #9fd9a2; }
+  #hint { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(20,22,28,0.9); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 14px; display: none; }
+  h2 { font-size: 13px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .06em; color: #9aa0ac; }
+  .bar { position: relative; height: 12px; background: #1c1f27; border: 1px solid #454a58; border-radius: 4px; overflow: hidden; margin: 3px 0 6px; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #5a8a4a, #c9a84c); }
+  .bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: #e66; }
+  .chore { display: flex; justify-content: space-between; gap: 8px; } .chore.done { color: #9fd9a2; } .chore span:first-child::before { content: '☐ '; } .chore.done span:first-child::before { content: '☑ '; }
+  .warn { color: #f09a8a; }
+  #floats div { position: fixed; color: #ff8a7a; font-weight: 700; font-size: 20px; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  #dlg { left: 50%; bottom: 28px; transform: translateX(-50%); width: min(620px, 92vw); display: none; font-size: 15px; }
+  #dlg .who { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #c9a84c; margin-bottom: 4px; }
+  button { background: #2e3140; color: #ece8df; border: 1px solid #4c5163; border-radius: 5px; padding: 8px 12px; font-size: 13px; cursor: pointer; margin: 6px 6px 0 0; }
+  button:hover { background: #3b3f52; } button.red { background: #5a1f24; border-color: #c24850; }
+  #disc { display: none; }
+  #speech { left: 50%; bottom: 28px; transform: translateX(-50%); width: min(620px, 92vw); font-size: 15px; min-height: 46px; }
+  #speech .who { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #c9a84c; margin-bottom: 4px; }
+  #discTools { top: 12px; left: 12px; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.9s ease; z-index: 50; }
+  #final { left: 50%; bottom: 12px; transform: translateX(-50%); width: min(760px, 94vw); display: none; font-size: 13px; line-height: 1.5; }
+  #final h2 { font-size: 15px; color: #e6c46a; } #final li { margin: 2px 0; }
+  #stick { position: fixed; left: 22px; bottom: 26px; width: 130px; height: 130px; border-radius: 50%; background: rgba(20,22,28,0.45); border: 2px solid rgba(230,196,106,0.55); touch-action: none; display: none; z-index: 20; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(230,196,106,0.75); pointer-events: none; }
+  #installBtn { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); display: none; margin: 0; z-index: 30; background: #6b5a2a; border-color: #c9a84c; }
+  #helpBtn { position: fixed; top: 12px; right: 12px; display: none; margin: 0; z-index: 30; }
+  @media (pointer: coarse), (max-width: 760px) {
+    html, body { touch-action: none; -webkit-user-select: none; user-select: none; }
+    #stick { display: block; }
+    #helpBtn { display: block; }
+    #help { display: none; top: 52px; max-height: 70vh; overflow: auto; }
+    #help.open { display: block !important; }
+    #hud { width: 190px; font-size: 11px; padding: 6px 9px; }
+    #hud h2 { font-size: 11px; }
+    #feed { left: auto; right: 12px; top: 52px; bottom: auto; width: 200px; font-size: 11px; }
+    #actions { right: 8px; bottom: 8px; }
+    #actions { padding: 5px 6px; }
+    #actions button { padding: 6px 8px; font-size: 12px; margin: 2px; }
+    #hint { bottom: 170px; font-size: 13px; max-width: 80vw; text-align: center; }
+    #dlg, #speech { bottom: 8px; font-size: 13px; }
+    #final { font-size: 12px; }
+    #title { top: 8%; font-size: 12px; }
+  }
+  @media (pointer: coarse) and (max-height: 520px) {
+    #actions button { padding: 5px 7px; font-size: 11px; margin: 2px; }
+    #hud { width: 165px; } #hud .chore { font-size: 10px; }
+    #stick { width: 110px; height: 110px; bottom: 14px; left: 14px; }
+    #hint { bottom: 130px; }
+  }
+  #title { left: 50%; top: 18%; transform: translateX(-50%); text-align: center; width: min(560px, 92vw); font-size: 14px; }
+  #title h1 { margin: 0 0 6px; font-size: 20px; color: #e6c46a; }
+</style>
+</head>
+<body>
+<div id="lvl" class="stage"></div>
+<div id="lap" class="stage"></div>
+
+<div id="hud" class="panel">
+  <h2>Jack</h2>
+  <div>Size <b id="sizeV">75%</b> <span style="color:#8a8f9c">(floor 50%)</span></div>
+  <div class="bar"><i id="sizeBar"></i><b style="left:50%"></b></div>
+  <h2 style="margin-top:8px">The golden hen</h2>
+  <div class="chore" id="cSweep"><span>Sweep the floor</span><span id="cSweepV">0/6</span></div>
+  <div class="chore" id="cDish"><span>Fill her dish</span><span></span></div>
+  <div class="chore" id="cWater"><span>Carry water to her trough</span><span id="cWaterV"></span></div>
+  <div class="chore" id="cTrust"><span>Win her trust</span><span id="cTrustV">0%</span></div>
+  <div class="bar"><i id="trustBar"></i></div>
+  <div id="prints" style="color:#b5b7c2"></div>
+  <div id="carry" style="color:#b5b7c2"></div>
+  <div id="pace" style="color:#b5b7c2"></div>
+</div>
+<div id="help" class="panel">
+  <b>W/S</b> walk forwards/back &nbsp; <b>A/D</b> turn &nbsp; <b>Shift</b> (hold) run &nbsp; <b>C</b> toggle sneaking<br>
+  <b>E</b> pick up / drop anything (even the hen), or sit on the chair<br>
+  <b>Space</b> clap if your hands are free; use what you hold (hold it to sweep)<br>
+  <b>Drag</b> the camera: sideways turns Jack (and the view with him), up/down tilts it &nbsp; <b>G</b> call Gerda back early<br>
+  Return the broom and bucket to their places, or leave them lying about at a small cost. Water used anywhere but the trough makes mud.<br>
+  <span class="warn">Moving fast near the hen scares her; moving fast with water slops it. Holding the hen costs her trust like a clap every second. Clapping, spilling, startling, lying and undone chores all shrink you.</span>
+</div>
+<div id="actions" class="panel">
+  <button data-act="run" id="bRun">Run</button><button data-act="sneak" id="bSneak">Sneak</button><br>
+  <button data-act="interact">Pick up / drop</button><button data-act="space" id="bSpace">Clap / use</button><br>
+  <button data-act="call">Call Gerda</button>
+</div>
+<div id="feed" class="panel"></div>
+<div id="hint"></div>
+<div id="stick"><div id="knob"></div></div>
+<button id="helpBtn">?</button>
+<button id="installBtn">Install app</button>
+<div id="floats"></div>
+<div id="title" class="panel" style="display:none"><h1>The Golden Hen</h1>Gerda has gone out and left Jack in charge of her golden hen. Sweep, fill the dish, carry the water without spilling it, and win the hen's trust by approaching slowly. </div>
+<div id="dlg" class="panel"><div class="who" id="dlgWho"></div><div id="dlgText"></div><div id="dlgChoices"></div></div>
+
+<div id="disc">
+  <div id="discTools" class="panel"><h2>The correction</h2><div id="discSize"></div><div id="discBand"></div><div class="bar"><i id="discBar" style="width:0"></i></div>
+    <button data-v="overview">Overview</button><button data-v="behind">Behind</button><button data-v="shoulder">Over her shoulder</button><button data-v="face">Face</button><br><button class="red" id="redBtn">Red</button></div>
+  <div id="speech" class="panel"><div class="who" id="spWho"></div><div id="spText"></div></div>
+</div>
+<div id="fade"></div>
+<div id="final" class="panel"></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/pain.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/blocky.js"></script>
+<script src="js/lap-poses.js"></script>
+<script src="js/lap.js"></script>
+<script src="js/level.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var started = true, floatEls = [];
+  var ui = {
+    fade: function (on) { $('fade').style.opacity = on ? 1 : 0; },
+    log: function (log) { $('feed').innerHTML = log.map(function (l) { return '<div class="' + l.cls + '">' + l.text + '</div>'; }).join(''); },
+    floats: function (floats, camera, pos, scale) {
+      while (floatEls.length < floats.length) { var d = document.createElement('div'); $('floats').appendChild(d); floatEls.push(d); }
+      floatEls.forEach(function (el, i) {
+        var f = floats[i]; if (!f) { el.style.display = 'none'; return; }
+        var v = pos.clone(); v.y = 30 * scale + f.t * 14; v.project(camera);
+        el.textContent = f.text; el.style.display = 'block'; el.style.opacity = Math.max(0, 1 - f.t / 1.6);
+        el.style.left = ((v.x + 1) / 2 * innerWidth - 20) + 'px'; el.style.top = ((1 - v.y) / 2 * innerHeight) + 'px';
+      });
+    },
+    hud: function (S, x) {
+      $('sizeV').textContent = Math.round(S.size * 100) + '%'; $('sizeBar').style.width = (S.size * 100) + '%';
+      var set = function (id, done) { $(id).classList.toggle('done', !!done); };
+      set('cSweep', S.chores.sweep); set('cDish', S.chores.dish); set('cWater', S.chores.water); set('cTrust', S.chores.trust);
+      $('cSweepV').textContent = x.patches + '/' + x.patchTotal;
+      $('cWaterV').textContent = Math.round(S.troughLevel || 0) + '%' + (S.counts.spills ? ' · spilled ×' + S.counts.spills : '');
+      $('cTrustV').textContent = Math.round(S.hen.trust) + '%'; $('trustBar').style.width = S.hen.trust + '%';
+      $('prints').textContent = x.prints ? 'Muddy footprints: ' + x.prints : '';
+      $('carry').textContent = S.holding === 'bucket' ? 'Carrying: water (' + Math.round(S.water) + '%)' : S.holding ? 'Carrying: ' + S.holding : 'Hands empty';
+      var fast = (S.speedN > 13 && S.hen.pos.distanceTo(S.pos) < 28) || (S.holding === 'bucket' && S.water > 0 && S.speedN > 27); $('pace').innerHTML = S.phase !== 'play' ? '' : S.speedN < 0.5 ? 'Still' : fast ? '<span class="warn">Too fast! (sneak with C)</span>' : S.creeping ? 'Sneaking' : 'Walking';
+      $('bSneak').classList.toggle('on', !!S.sneak); $('bRun').classList.toggle('on', !!S.runOn); $('actions').style.display = S.phase === 'play' ? 'block' : 'none';
+      var h = $('hint'); h.style.display = S.hint && S.phase === 'play' ? 'block' : 'none'; h.textContent = S.hint;
+      $('help').style.display = S.phase === 'play' ? '' : 'none'; $('stick').style.visibility = S.phase === 'play' ? 'visible' : 'hidden'; $('helpBtn').style.visibility = S.phase === 'play' ? 'visible' : 'hidden'; $('hud').style.display = S.phase === 'play' ? 'block' : 'none';
+    },
+    dialog: function (d) {
+      $('speech').style.display = 'none'; $('dlg').style.display = 'block'; $('dlgWho').textContent = d.who; $('dlgText').textContent = d.text; var c = $('dlgChoices'); c.innerHTML = '';
+      d.choices.forEach(function (ch) { var b = document.createElement('button'); b.textContent = ch.label; b.onclick = function () { $('dlg').style.display = 'none'; ch.fn(); }; c.appendChild(b); });
+    },
+    discipline: function (on, plan) { $('disc').style.display = on ? 'block' : 'none'; $('speech').style.display = on ? 'block' : 'none'; $('hud').style.display = 'none'; $('help').style.display = 'none'; $('actions').style.display = 'none'; $('feed').style.display = 'none'; $('hint').style.display = 'none'; $('dlg').style.display = 'none'; if (on) $('discSize').textContent = 'Jack is ' + Math.round(L.S.size * 100) + '% · ' + plan.name + ' correction'; },
+    say: function (who, text) { $('spWho').textContent = who; $('spText').textContent = text; },
+    meter: function (i) { $('discBar').style.width = Math.min(100, i.distress / 1.5 * 100) + '%'; $('discBand').textContent = 'Distress ' + i.distress.toFixed(2) + ' — ' + i.band; },
+    finish: function (r) {
+      $('discTools').style.display = 'none'; $('speech').style.display = 'none'; $('dlg').style.display = 'none';
+      var items = (r.reasons || []).slice(); if (r.lie) items.push('lied about it');
+      var head = r.red ? 'Red — stopped at once. Nothing is held against him.' : r.praise ? 'No correction: a good boy.' : 'Smacks: <b>' + r.hits + '</b> · ' + r.plan.name + ' correction' + (r.lie ? ' (a tier firmer for the lie)' : '');
+      var why = r.red ? '' : items.length ? '<div>Disciplined for: ' + items.join(' · ') + '.</div>' : '<div>Nothing to be disciplined for.</div>';
+      $('final').style.display = 'block'; $('disc').style.display = 'block';
+      $('final').innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div>' + head + ' · Jack ends at <b>' + Math.round(r.size * 100) + '%</b></div><button onclick="location.reload()" style="margin:0">Play again</button></div>' + why;
+    },
+  };
+  var L = Level.create({ level: $('lvl'), lap: $('lap') }, ui);
+  document.querySelectorAll('#discTools [data-v]').forEach(function (b) { b.onclick = function () { L.view(b.dataset.v); }; });
+  (function () {                                                                      // the joystick: this finger walks; any other touch drags the view
+    var st = $('stick'), kb = $('knob'), id = null, R = 65;
+    function move(e) { var r = st.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), m = Math.hypot(dx, dy) || 1, k = Math.min(1, m / R);
+      var x = dx / m * k, y = dy / m * k; kb.style.transform = 'translate(' + x * R * 0.7 + 'px,' + y * R * 0.7 + 'px)'; L.stick(x, y); if (!started) { started = true; $('title').style.display = 'none'; } }
+    st.addEventListener('pointerdown', function (e) { if (id !== null) return; id = e.pointerId; st.setPointerCapture(e.pointerId); move(e); e.preventDefault(); });
+    st.addEventListener('pointermove', function (e) { if (e.pointerId === id) move(e); });
+    ['pointerup', 'pointercancel'].forEach(function (ev) { st.addEventListener(ev, function (e) { if (e.pointerId !== id) return; id = null; kb.style.transform = ''; L.stick(0, 0); }); });
+    ['gesturestart', 'gesturechange'].forEach(function (g) { document.addEventListener(g, function (e) { e.preventDefault(); }); });
+    $('helpBtn').addEventListener('click', function () { $('help').classList.toggle('open'); });
+  })();
+  document.querySelectorAll('#actions button').forEach(function (b) {
+    var a = b.dataset.act; b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    if (a === 'space') { b.addEventListener('pointerdown', function () { L.act('space', true); }); ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, function () { L.act('space', false); }); }); }
+    else b.addEventListener('pointerdown', function (e) { e.preventDefault(); started = true; $('title').style.display = 'none'; L.act(a); });
+  });
+  $('redBtn').onclick = function () { L.redWord(); };
+  addEventListener('keydown', function (e) { if (!started && /^(w|a|s|d|W|A|S|D|Arrow.*)$/.test(e.key)) { started = true; $('title').style.display = 'none'; } });
+  var last = performance.now();
+  (function loop(t) { var dt = Math.min(0.05, (t - last) / 1000); last = t; if (started || L.S.phase !== 'play') L.frame(dt); else L.frame(0.0001); requestAnimationFrame(loop); })(last);
+  // Installable web app: offline cache, and an Install button where the browser offers one.
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () {});
+  var deferred = null;
+  addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; $('installBtn').style.display = 'block'; });
+  $('installBtn').addEventListener('click', function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.then(function () { deferred = null; $('installBtn').style.display = 'none'; }); });
+  addEventListener('appinstalled', function () { $('installBtn').style.display = 'none'; });
+  window.__level = L;
+})();
+</script>
+<script src="js/buildbadge.js"></script>
+</body>
+</html>

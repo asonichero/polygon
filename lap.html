@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beanstalk — Correction positions</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14181f; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; color: #e8e6e3; }
+  #view { position: fixed; inset: 0 320px 0 0; }
+  #panel { position: fixed; top: 0; right: 0; bottom: 0; width: 320px; box-sizing: border-box; padding: 14px 16px; overflow-y: auto; background: rgba(20,20,26,0.96); border-left: 1px solid #2c2c36; font-size: 13px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #9aa0ac; margin: 14px 0 6px; border-bottom: 1px solid #2c2c36; padding-bottom: 3px; }
+  .sub { color: #8a8a96; font-size: 11px; line-height: 1.5; }
+  .btns { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  button { background: #2e2e3a; color: #e8e6e3; border: 1px solid #454555; border-radius: 4px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  button:hover:not(:disabled) { background: #3a3a48; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.on { background: #6b5a2a; border-color: #c9a84c; color: #fff; }
+  button.big { font-size: 14px; padding: 9px 16px; background: #4a3a1c; border-color: #c9a84c; }
+  button.red { background: #5a1f24; border-color: #c24850; }
+  .stepper { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .stepper span.l { width: 64px; color: #c9c9d1; } .stepper span.v { width: 40px; text-align: center; color: #c9a84c; font-variant-numeric: tabular-nums; }
+  input[type=number] { width: 48px; background: #1c1c24; color: #e8e6e3; border: 1px solid #454555; border-radius: 4px; padding: 5px; }
+  #meter { position: relative; height: 16px; background: #1c1c24; border: 1px solid #454555; border-radius: 4px; overflow: hidden; }
+  #meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #4a7a4a, #c9a84c 60%, #c24850); }
+  #meter b { position: absolute; top: 0; bottom: 0; left: 66.7%; width: 2px; background: #fff; opacity: .7; }
+  #band { margin-top: 5px; font-size: 13px; } #line { margin-top: 4px; min-height: 2.6em; font-size: 12px; color: #b9b9c4; line-height: 1.4; }
+  #end { margin-top: 8px; padding: 8px 10px; border: 1px solid #454555; border-radius: 4px; background: #1c1c24; font-size: 12px; line-height: 1.5; }
+  #pe { display: none; } #pe.on { display: block; }
+  #pe .row { margin: 4px 0; } #pe .row label { display: flex; justify-content: space-between; font-size: 12px; color: #c9c9d1; } #pe .row label span:last-child { color: #c9a84c; font-variant-numeric: tabular-nums; }
+  #pe input[type=range] { width: 100%; margin: 0; } #pe textarea { width: 100%; height: 150px; box-sizing: border-box; background: #1c1c24; color: #c9c9d1; border: 1px solid #454555; border-radius: 4px; font: 11px/1.4 ui-monospace, Menlo, monospace; }
+  #pe h4 { margin: 10px 0 4px; font-size: 11px; color: #8a8a96; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  @media (max-width: 760px) { #view { right: 0; bottom: 300px; } #panel { top: auto; width: 100%; height: 300px; border-left: 0; border-top: 1px solid #2c2c36; } }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<aside id="panel">
+  <h1>Correction positions</h1>
+  <div class="sub">Gerda gives, Jack receives. Drag to orbit, scroll to zoom, right-drag to pan. Space smacks.</div>
+
+  <h3>Position</h3>
+  <div class="btns" id="places"></div>
+
+  <h3>The correction</h3>
+  <div class="btns"><button id="smack" class="big">Smack</button><button id="run">Run</button><input id="runN" type="number" min="1" max="60" value="6"><button id="stop">Stop</button></div>
+  <div class="btns" style="margin-top:6px"><button id="endBtn">End the correction</button><button id="red" class="red">Red</button></div>
+  <div class="stepper" style="margin-top:8px"><span class="l">Pace</span><button data-s="pace" data-d="-1">−</button><span class="v" id="paceV">1.0×</span><button data-s="pace" data-d="1">+</button></div>
+  <div class="stepper"><span class="l">Strength</span><button data-s="strength" data-d="-1">−</button><span class="v" id="strV">1.0×</span><button data-s="strength" data-d="1">+</button></div>
+
+  <h3>Jack</h3>
+  <div id="meter"><i id="fill"></i><b title="the edge of resistance"></b></div>
+  <div id="band">Composed</div><div id="line"></div>
+
+  <h3>Implement</h3>
+  <div class="btns" id="impl"></div>
+  <h3>Side</h3>
+  <div class="btns" id="side"></div>
+  <h3>Clothes</h3>
+  <div class="btns"><button id="trousers">Trousers: up</button><button id="drawers">Drawers: up</button></div>
+  <div class="sub" style="margin-top:4px">Clothing over the rear cushions the sting, not the ache.</div>
+  <h3>Jack's size</h3>
+  <div class="stepper"><input id="size" type="range" min="50" max="100" value="100" style="flex:1"><span class="v" id="sizeV">100%</span></div>
+  <div class="sub">He shrinks on arrival, then regains his size level by level. (50% is the lowest this position works at.)</div>
+  <h3>Who gives</h3>
+  <div class="btns" id="giver"></div>
+  <h3>Wardrobe</h3>
+  <div class="sub">Gerda</div><div class="btns" id="wardG"></div>
+  <div class="sub" style="margin-top:6px">Jack</div><div class="btns" id="wardJ"></div>
+  <h3>Camera</h3>
+  <div class="btns" id="cams"></div>
+  <h3>Scene</h3>
+  <div class="btns"><button id="clear">Clear marks</button><button id="snd" class="on">Sound</button><button id="again">Start again</button></div>
+  <div id="end" hidden></div>
+  <h3>Arm poses (over the knee)</h3>
+  <div class="sub">Jack's right arm: reaching back for his belt, or pinned behind him with Gerda holding his wrist. Her left hand rests between his shoulder blades in the other positions. The arms are reached by their own joints, so they follow every pose.</div>
+  <div class="btns" id="armBtns" style="margin:6px 0"></div>
+  <h3>Pose editor</h3>
+  <div class="btns"><button id="peToggle">Edit poses</button></div>
+  <div id="pe">
+    <div class="sub" style="margin:6px 0">Rotations are the joint's own angles from its standing position, within its range; positions are how far a part has moved from where it stands. Shown live. The position and implement are the ones chosen above. Nothing is saved: press Report when you are happy and paste it into the chat.</div>
+    <div class="sub" id="peWhere" style="margin:4px 0;color:#c9a84c"></div>
+    <div class="sub" style="margin:4px 0">Over the table nothing is pinned: no hand, arm or implement is aimed at a contact point; she stands as she is and your offsets are the pose. (Over the knee keeps its aimed arm.)</div>
+    <h4>Jack's size (two sets of poses: they blend between)</h4><div class="btns" id="peSize"></div>
+    <h4>Body</h4><div class="btns" id="peFig"></div>
+    <h4>Beat (the scene is held there; the same for both bodies)</h4><div class="btns" id="peBeat"></div>
+    <h4>Bone</h4><div class="btns" id="peBone"></div>
+    <div class="sub" id="peInfo" style="margin:6px 0"></div>
+    <div class="sub">Or drag the handles in the view: <b style="color:#ffcc33">yellow spheres</b> swing a bone so the joint at its far end follows the cursor, <b style="color:#44ddff">cyan cubes</b> move it, <b style="color:#ff66cc">pink diamonds</b> twist it. The selected one is white.</div>
+    <h4>Rotation (degrees)</h4><div id="peR"></div>
+    <h4>Position (units)</h4><div id="peP"></div>
+    <div class="btns" style="margin-top:8px"><button id="peResetBone">Reset bone</button><button id="peResetBeat">Reset beat</button><button id="peRelease">Release the scene</button></div>
+    <h4>Report</h4>
+    <div class="btns"><button id="peReport">Report</button><button id="peCopy">Copy</button></div>
+    <textarea id="peOut" readonly placeholder="Press Report"></textarea>
+  </div>
+</aside>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/pain.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/blocky.js"></script>
+<script src="js/cast.js"></script>
+<script src="js/lap-poses.js"></script>
+<script src="js/lap.js"></script>
+<script>
+(function () {
+  var L = Lap.create(document.getElementById('view')), st = L.st, $ = function (id) { return document.getElementById(id); };
+  var PACE = [0.5, 0.7, 1, 1.4, 2], STR = [0.5, 0.75, 1, 1.25, 1.5], idx = { pace: 2, strength: 2 };
+  function btn(box, label, fn, key) { var b = document.createElement('button'); b.textContent = label; b.dataset.k = key; b.onclick = fn; $(box).appendChild(b); return b; }
+  // who gives: Gerda, or Jack's mother (neutral or disapproving)
+  [['Gerda', 'gerda', 0], ["Jack's mother", 'mother', 0], ["Mother, disapproving", 'mother', 1]].forEach(function (g) { btn('giver', g[0], function () { L.giver(g[1], g[2]); document.querySelectorAll('#giver button').forEach(function (b) { b.classList.toggle('on', b === this); }, this); }, g[0]); });
+  // wardrobe
+  L.outfits.gerda.forEach(function (n) { btn('wardG', n, function () { L.outfit('gerda', n); markW(); }, n); });
+  L.outfits.jack.forEach(function (n) { btn('wardJ', n, function () { L.outfit('jack', n); markW(); }, n); });
+  function markW() {
+    document.querySelectorAll('#wardG button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.outfit.gerda); });
+    document.querySelectorAll('#wardJ button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.outfit.jack); });
+  }
+  // implements
+  Object.keys(L.IMPL).forEach(function (k) { btn('impl', L.IMPL[k].name, function () { L.implement(k); mark(); if (window.__peSync) window.__peSync(); }, k); });
+  [['alt', 'Alternate'], ['L', 'Left'], ['R', 'Right']].forEach(function (p) { btn('side', p[1], function () { st.side = p[0]; mark(); }, p[0]); });
+  [['overview', 'Overview'], ['behind', 'Behind'], ['shoulder', 'Over your shoulder'], ['face', 'Face'], ['tableSide', 'Table: side'], ['tableBehind', 'Table: behind'], ['tableFront', 'Table: front']].forEach(function (p) { btn('cams', p[1], function () { L.view(p[0]); }, p[0]); });
+  function mark() {
+    var bb = document.querySelector('#impl button[data-k=birch]'); if (bb) { bb.disabled = st.to !== 'table'; bb.title = 'The birch is for the table'; }
+    document.querySelectorAll('#impl button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.implement); });
+    document.querySelectorAll('#side button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.side); });
+    $('trousers').textContent = 'Trousers: ' + st.trousers; $('drawers').textContent = 'Drawers: ' + st.drawers;
+    $('drawers').disabled = st.trousers === 'up';
+  }
+  [['lap', 'Over the knee'], ['table', 'Over the table']].forEach(function (p) { btn('places', p[1], function () {
+    if (p[0] === 'lap' && st.implement === 'birch') L.implement('hand');          // (the birch is for the table)
+    L.place(p[0], 1.2); L.view(p[0] === 'table' ? 'tableBehind' : 'overview'); markP(); if (window.__peSync) window.__peSync(); }, p[0]); });
+  function markP() { document.querySelectorAll('#places button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.place); }); }
+  mark(); markW(); markP();
+  $('smack').onclick = function () { L.smack(); };
+  $('run').onclick = function () { L.run(+$('runN').value); };
+  $('stop').onclick = function () { L.stop(); };
+  $('endBtn').onclick = function () { L.end(); };
+  $('red').onclick = function () { L.red(); };
+  $('size').oninput = function () { L.size(this.value / 100); $('sizeV').textContent = this.value + '%'; };
+  $('clear').onclick = function () { L.clearMarks(); };
+  $('again').onclick = function () { L.reset(); $('end').hidden = true; };
+  $('snd').onclick = function () { st.sound = !st.sound; $('snd').classList.toggle('on', st.sound); };
+  $('trousers').onclick = function () { L.layers({ trousers: st.trousers === 'up' ? 'down' : 'up', drawers: st.trousers === 'up' ? st.drawers : st.drawers }); mark(); };
+  $('drawers').onclick = function () { L.layers({ drawers: st.drawers === 'up' ? 'down' : 'up' }); mark(); };
+  document.querySelectorAll('.stepper button').forEach(function (b) {
+    b.onclick = function () {
+      var k = b.dataset.s, t = k === 'pace' ? PACE : STR;
+      idx[k] = Math.max(0, Math.min(t.length - 1, idx[k] + +b.dataset.d)); st[k] = t[idx[k]];
+      $(k === 'pace' ? 'paceV' : 'strV').textContent = st[k].toFixed(1) + '×';
+    };
+  });
+  addEventListener('keydown', function (e) { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); L.smack(); } });
+  var LINES = ['Jack takes it with a grin.', 'He flinches, but keeps his grin.', 'He squirms, the grin gone.', 'He kicks and yelps, close to the edge.', 'He is past the edge now: begging, and most receptive.', 'Too harsh.'];
+  L.on(function (type, d) {
+    if (type === 'hit') $('line').textContent = LINES[L.bandIndex()];
+    if (type === 'tooharsh') $('line').textContent = 'That is too harsh. Nothing more is struck; end the correction.';
+    if (type === 'end') {
+      var e = $('end'); e.hidden = false;
+      e.innerHTML = d.red ? '<b>“Red.”</b> The scene stops at once; Jack is helped up. Nothing is held against him.' : '<b>Done.</b> ' + d.hits + ' smack' + (d.hits === 1 ? '' : 's') + '; he was brought as far as <b>' + L.BANDS[d.peak < 0.3 ? 0 : d.peak < 0.6 ? 1 : d.peak < 0.9 ? 2 : d.peak < 1 ? 3 : d.peak < 1.5 ? 4 : 5] + '</b>.';
+    }
+    if (type === 'reset') $('line').textContent = '';
+  });
+  var last = performance.now();
+  (function loop(t) {
+    var dt = Math.min(0.05, (t - last) / 1000); last = t; L.update(dt);
+    var i = L.info();
+    $('fill').style.width = Math.min(100, i.distress / 1.5 * 100) + '%';
+    $('band').innerHTML = 'Distress <b>' + i.distress.toFixed(2) + '</b> — ' + i.band + ' · ' + i.hits + ' smack' + (i.hits === 1 ? '' : 's');
+    mark(); var okE = L.editor.editable(); if (okE !== window.__wasOk) { window.__wasOk = okE; if (window.__peSync) window.__peSync(); }
+    $('smack').disabled = !L.canStrike() || i.busy; $('run').disabled = !L.canStrike(); $('stop').disabled = !i.running;
+    $('endBtn').disabled = i.ended; $('red').disabled = i.ended;
+    requestAnimationFrame(loop);
+  })(last);
+
+  // ── Pose editor: the position and implement are the scene's (chosen above); here the body, the beat and the bone. ──
+  (function () {
+    var E = L.editor, S = { fig: 'giver', beat: 'contactL', bone: 'armR' }, sl = { r: [], p: [] }, open = false;
+    E.onPick(function (bone) { S.bone = bone; refresh(); });
+    E.onChange(function () { pull(); });
+    function chips(box, items, key, on, label) {
+      var el = $(box); el.innerHTML = '';
+      items.forEach(function (it) { var b = document.createElement('button'); b.textContent = label ? label(it) : it; b.className = S[key] === it ? 'on' : ''; b.onclick = function () { S[key] = it; on(); }; el.appendChild(b); });
+    }
+    function sliders(box, kind, lo, hi, step) {
+      var el = $(box); el.innerHTML = ''; sl[kind] = [];
+      ['X', 'Y', 'Z'].forEach(function (ax, i) {
+        var row = document.createElement('div'); row.className = 'row';
+        row.innerHTML = '<label><span>' + ax + '</span><span>0</span></label><input type="range" min="' + lo + '" max="' + hi + '" step="' + step + '" value="0">';
+        var inp = row.querySelector('input'), out = row.querySelector('label span:last-child');
+        inp.oninput = function () { out.textContent = (+inp.value).toFixed(kind === 'r' ? 0 : 1); push(); };
+        sl[kind].push({ inp: inp, out: out }); el.appendChild(row);
+      });
+    }
+    function push() { E.set(S.fig, S.beat, S.bone, sl.r.map(function (s) { return +s.inp.value; }), sl.p.map(function (s) { return +s.inp.value; })); }
+    function pull() {
+      var v = E.get(S.fig, S.beat, S.bone);
+      var lim = E.limits(S.bone); sl.r.forEach(function (s, i) { s.inp.min = lim ? lim[i][0] : -180; s.inp.max = lim ? lim[i][1] : 180; });       // (the joint's own range)
+      ['r', 'p'].forEach(function (k) { sl[k].forEach(function (s, i) { s.inp.value = v[k][i]; s.out.textContent = (+v[k][i]).toFixed(k === 'r' ? 0 : 1); }); });
+    }
+    function refresh() {
+      if (!open) return;
+      var ok = E.editable();
+      $('peWhere').textContent = (st.to === 'table' ? 'Over the table' : 'Over the knee') + ' · ' + L.IMPL[st.implement].name + (E.variant() ? ' · ARM POSE (' + E.variant().slice(5) + '): its own set of poses, in every beat; no other pose is added to it' : '') + (ok ? '' : ' — not poseable (wait for him to settle, or pick a position and implement that strike)');
+      var sb = $('peSize'); sb.innerHTML = '';
+      [100, 50].forEach(function (k) { var b = document.createElement('button'); b.textContent = k + '%'; b.className = E.sizeKey() === k ? 'on' : ''; b.onclick = function () { E.sizeKey(k); $('size').value = k; $('sizeV').textContent = k + '%'; refresh(); }; sb.appendChild(b); });
+      if (!ok) { E.release(); E.handles(false); return; }
+      chips('peFig', ['giver', 'jack'], 'fig', function () { S.bone = E.bones(S.fig)[0]; hold(); refresh(); }, function (f) { return f === 'jack' ? 'Jack' : 'The giver'; });
+      chips('peBeat', E.beats, 'beat', function () { hold(); refresh(); });
+      if (E.bones(S.fig).indexOf(S.bone) < 0) S.bone = E.bones(S.fig)[0];
+      chips('peBone', E.bones(S.fig), 'bone', function () { refresh(); });
+      $('peInfo').textContent = E.info(S.fig, S.bone); E.select(S.bone); E.handles(true, S.fig);
+      var mv = E.canMove(S.bone); $('peP').style.display = mv ? '' : 'none'; var hd = $('peP').previousElementSibling; if (hd) hd.style.display = mv ? '' : 'none';
+      pull();
+    }
+    function hold() { E.hold(S.fig, S.beat); }
+    window.__peSync = function () { if (open) { hold(); refresh(); } };
+    sliders('peR', 'r', -180, 180, 1); sliders('peP', 'p', -10, 10, 0.1);
+    $('peToggle').onclick = function () {
+      open = !open; $('pe').classList.toggle('on', open); $('peToggle').classList.toggle('on', open); $('size').disabled = open;
+      if (open) { $('size').value = E.sizeKey(); $('sizeV').textContent = E.sizeKey() + '%'; hold(); refresh(); } else { E.release(); E.handles(false); }
+    };
+    $('peResetBone').onclick = function () { E.resetBone(S.fig, S.beat, S.bone); pull(); };
+    $('peResetBeat').onclick = function () { E.resetBeat(S.fig, S.beat); pull(); };
+    $('peRelease').onclick = function () { E.release(); };
+    $('peReport').onclick = function () { $('peOut').value = E.report(); };
+    $('peCopy').onclick = function () { $('peOut').value = E.report(); $('peOut').select(); try { document.execCommand('copy'); } catch (e) { /* select-and-copy by hand */ } };
+  })();
+  window.__lap = L;
+
+  // Arm poses over the knee
+  (function () {
+    var NAMES = [[null, 'Normal'], ['armReach', 'Reaching for his belt'], ['armHold', 'Pinned behind him']];
+    function show(k) {
+      L.armReach(0); L.armHold(0); if (st.to !== 'lap' || st.blend < 1) { L.place('lap', 0); L.size(0.5); } st.settle = 0; st.noRecovery = true; if (k) L[k](1);       // (the scene is not moved if it is already over the knee: the editor's held beat stays)
+      document.querySelectorAll('#armBtns button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === String(k)); }); if (window.__peSync) window.__peSync();
+    }
+    NAMES.forEach(function (a) { btn('armBtns', a[1], function () { show(a[0]); }, String(a[0])); });
+    show(null);
+  })();
+})();
+</script>
+<script src="js/buildbadge.js"></script>
+</body>
+</html>

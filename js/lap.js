@@ -7,7 +7,7 @@
 // across her lap, hips over her right knee, head hanging off her left side, hands toward the floor.
 (function (root) {
 'use strict';
-const THREE = root.THREE, B = root.Blocky, S = root.Pain;
+const THREE = root.THREE, B = root.Poly, S = root.Pain;
 const V3 = THREE.Vector3, UP = new V3(0, 1, 0), DOWN = new V3(0, -1, 0);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -42,7 +42,7 @@ function create(view, opts) {
   } else {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
-    view.appendChild(renderer.domElement);
+    view.appendChild(renderer.domElement); if (root.Retro) root.Retro.attach(renderer);
     scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140, 300);
     camera = new THREE.PerspectiveCamera(36, 1, 1, 600);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -69,18 +69,16 @@ function create(view, opts) {
   const qx = new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2), qy = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), Math.PI / 2);
   const qz = new THREE.Quaternion().setFromAxisAngle(new V3(0, 0, 1), PITCH);
   frame.quaternion.copy(qz).multiply(qy).multiply(qx);
-  const shins = [gerda.legL, gerda.legR].map(l => l.knee.children[0]);
-  const setShins = seated => { for (const sh of shins) { sh.scale.y = seated ? (6 + LEGH) / 6 : 1; sh.position.y = -3 * sh.scale.y; } };   // (seated, her shins reach the lowered floor; standing, they are as they are)
+  const setShins = seated => B.stretchShins(gerda, seated ? (6 + LEGH) / 6 : 1);   // (seated, her shins reach the lowered floor; standing, they are as they are)
   setShins(true);
   B.setPose(gerda, 'sit'); Object.assign(gerda.state, B.POSES.sit);
   Object.assign(jack.state, { hipY: 0, lift: 0 }); Object.assign(jack.target, { hipY: 0, lift: 0 });
   // The glutes block hangs from a hinge at its top edge, which lies in the plane of his back (just proud of it) at the bottom edge of the torso, and
   // tips forward from there part-way toward the angle of his thighs (which fold forward at the hip), bridging his back and his thighs. It
   // takes the look of the trousers, drawers or bare skin.
-  const glutes = B.makeGlutes(), glutesTilt = new THREE.Group();
+  const glutesTilt = new THREE.Group();
   glutesTilt.position.set(0, 0.6, -2.55); glutesTilt.rotation.x = -0.45;
-  glutes.mesh.scale.set(1.1, 1.2, 1.2); glutes.mesh.position.set(0, -2.6, 2.58);   // back face in the hinge's plane, top face at the hinge
-  glutesTilt.add(glutes.mesh); jack.hips.add(glutesTilt);
+  glutesTilt.add(jack.seat); jack.hips.add(glutesTilt);   // (the seat's cheeks are built in the hinge's frame: their backs in its plane, their tops at the hinge)
   // Where the hand lands: points on the back of Jack's hips (his left cheek is the nearer, world −z side), and the middle of his back.
   const mk = (x, y, z, parent) => { const o = new THREE.Object3D(); o.position.set(x, y, z); (parent || jack.torso).add(o); return o; };
   const rear = { L: mk(2, -2.4, -0.05, glutesTilt), R: mk(-2, -2.4, -0.05, glutesTilt), C: mk(0, -2.4, -0.05, glutesTilt) }, upperBack = mk(0, 10, -2);
@@ -558,10 +556,8 @@ function create(view, opts) {
   // ── Frame loop ──────────────────────────────────────────────────────────────────────────────────────────────────────────
   function repaint() {
     st.expr = exprFor();
-    B.paintJackInto(jack.skin, { trousers: st.trousers, drawers: st.drawers, marks: st.marks, expr: st.expr, outfit: st.outfit.jack, hitched: true });
-    jack.tex.needsUpdate = true;
-    B.paintGlutesInto(glutes.skin, { trousers: st.trousers, drawers: st.drawers, marks: st.marks, outfit: st.outfit.jack }); glutes.tex.needsUpdate = true;
-    jack.legL.ring.visible = jack.legR.ring.visible = st.trousers === 'down';
+    jack.paint({ trousers: st.trousers, drawers: st.drawers, marks: st.marks, expr: st.expr, outfit: st.outfit.jack, hitched: true });
+    gerda.paint({ outfit: st.outfit.gerda, expr: st.gerdaExpr || 0 });
     dirty = false;
   }
   function update(dt) {
@@ -817,18 +813,13 @@ function create(view, opts) {
     jackFull(v) { jackFull = v; },
     armed(v) { st.armed = !!v; },
     cover(v) { st.cover = v; }, fumble(v) { st.fumble = v; },
-    // Wardrobe: Jack has 'Outdoor'; Gerda 'Work' or 'Fine'.
-    // Who gives: Gerda, or Jack's mother (js/cast.js), on the same rig. expr 1 is her disapproving face.
-    giver(name, expr) {
-      st.giver = name === 'mother' && root.Cast ? 'mother' : 'gerda';
-      if (st.giver === 'mother') { root.Cast.paintMotherInto(gerda.skin, { expr: expr || 0 }); gerda.paintBun(root.Cast.MOTHER_BUN); }
-      else { B.paintGerdaInto(gerda.skin, st.outfit.gerda); gerda.paintBun(['#4b3022', '#67432f', '#33201a', '#4b3022', '#b9b0a6']); }
-      gerda.tex.needsUpdate = true;
-    },
+    // Wardrobe: Jack has Outdoor, Day, Soft and Fine; Gerda Work or Fine (B.OUTFITS).
     outfit(who, name) {
-      if (who === 'gerda' && B.OUTFITS.gerda.indexOf(name) >= 0) { st.outfit.gerda = name; if (st.giver !== 'mother') { B.paintGerdaInto(gerda.skin, name); gerda.tex.needsUpdate = true; } }
+      if (who === 'gerda' && B.OUTFITS.gerda.indexOf(name) >= 0) { st.outfit.gerda = name; dirty = true; }
       if (who === 'jack' && B.OUTFITS.jack.indexOf(name) >= 0) { st.outfit.jack = name; dirty = true; }
     },
+    // Gerda's face: 0 calm, 1 stern, 2 laughing.
+    gerdaExpr(e) { st.gerdaExpr = e; dirty = true; },
     outfits: B.OUTFITS,
     clearMarks() { st.marks = { L: 0, R: 0 }; dirty = true; },
     implement(name) { if (!IMPL[name] || (st.swing && st.swing.phase !== 'freeze')) return; st.implement = name; },

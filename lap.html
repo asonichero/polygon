@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beanstalk — Correction positions</title>
+<title>Polygon — Correction positions</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #14181f; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; color: #e8e6e3; }
   #view { position: fixed; inset: 0 320px 0 0; }
@@ -62,7 +62,7 @@
   <h3>Jack's size</h3>
   <div class="stepper"><input id="size" type="range" min="50" max="100" value="100" style="flex:1"><span class="v" id="sizeV">100%</span></div>
   <div class="sub">He shrinks on arrival, then regains his size level by level. (50% is the lowest this position works at.)</div>
-  <h3>Who gives</h3>
+  <h3>Gerda's face</h3>
   <div class="btns" id="giver"></div>
   <h3>Wardrobe</h3>
   <div class="sub">Gerda</div><div class="btns" id="wardG"></div>
@@ -99,8 +99,11 @@
 <script src="vendor/OrbitControls.js"></script>
 <script src="js/pain.js"></script>
 <script src="js/audio.js"></script>
-<script src="js/blocky.js"></script>
-<script src="js/cast.js"></script>
+<script src="js/poly-geo.js"></script>
+<script src="js/poly.js"></script>
+<script src="js/poly-jack.js"></script>
+<script src="js/poly-gerda.js"></script>
+<script src="js/retro.js"></script>
 <script src="js/lap-poses.js"></script>
 <script src="js/lap.js"></script>
 <script>
@@ -108,8 +111,9 @@
   var L = Lap.create(document.getElementById('view')), st = L.st, $ = function (id) { return document.getElementById(id); };
   var PACE = [0.5, 0.7, 1, 1.4, 2], STR = [0.5, 0.75, 1, 1.25, 1.5], idx = { pace: 2, strength: 2 };
   function btn(box, label, fn, key) { var b = document.createElement('button'); b.textContent = label; b.dataset.k = key; b.onclick = fn; $(box).appendChild(b); return b; }
-  // who gives: Gerda, or Jack's mother (neutral or disapproving)
-  [['Gerda', 'gerda', 0], ["Jack's mother", 'mother', 0], ["Mother, disapproving", 'mother', 1]].forEach(function (g) { btn('giver', g[0], function () { L.giver(g[1], g[2]); document.querySelectorAll('#giver button').forEach(function (b) { b.classList.toggle('on', b === this); }, this); }, g[0]); });
+  // Gerda's face: calm, stern or laughing
+  [['Calm', 0], ['Stern', 1], ['Laughing', 2]].forEach(function (g) { btn('giver', g[0], function () { L.gerdaExpr(g[1]); document.querySelectorAll('#giver button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === g[0]); }); }, g[0]); });
+  document.querySelector('#giver button').classList.add('on');
   // wardrobe
   L.outfits.gerda.forEach(function (n) { btn('wardG', n, function () { L.outfit('gerda', n); markW(); }, n); });
   L.outfits.jack.forEach(function (n) { btn('wardJ', n, function () { L.outfit('jack', n); markW(); }, n); });

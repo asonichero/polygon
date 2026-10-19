@@ -14,7 +14,7 @@ This is the design as it stands. It is written so that the engine's pieces (the 
 
 ## What is different from the pitch, and why
 
-* **Red is an adult in every form.** The first pitch had the mantle turn her into a chibi, a child-bodied form, and the corrections after that. That form is not built: a childlike body does not go into the correction scenes, even as an adult under a spell. The mantle is still the centre of the game, and it still transforms her, but it does not change her proportions (see "The Starweave Mantle").
+* **Red is an adult in every form, including the small one.** The pitch's chibi sheet shows rounded, big-headed, short-limbed proportions, which read as a child. That is not built. The mantle makes her *small*, not childlike: the same adult body, face and proportions at about half her height (the engine already scales a figure this way: Jack's size slider). Her walk, voice and expressions stay a grown woman's.
 * **The corrections stay what the engine already makes them**: consensual, between adult characters, not explicit. The shell keeps its 18+ notice. Red always chooses them (she asks, in the prologue's last scene, to be held to account), and the game has a safe word that stops a scene at once. The engine's safe word is "Red", which is also her name, so the game uses its own, **Briar**.
 * Everyone she is corrected by is an adult, and looks it.
 
@@ -24,7 +24,7 @@ A waist-length red cloak with a hood and gold stars worked along its hem. In the
 
 1. **The record.** It has a star for every tale. A star lights when she has learned a tale's lesson, and the hem shows how far she has come.
 2. **The way in.** Wearing it, Red can step into a tale's threshold (a door that was not there, a thread across the path). Taking it off, she is in her own world.
-3. **The change.** Putting it on is the transformation scene: the cloak flares, the light gathers, her hair is braided and ribboned, her wardrobe changes to the storybook one (the sheet's green tunic, trousers and boots), the world's colours deepen a little, and the music changes key. Her body is the same adult's.
+3. **The change.** Putting it on is the transformation scene: the cloak flares, the light gathers, her hair is braided and ribboned, her wardrobe changes to the storybook one (the sheet's green tunic, trousers and boots), the world's colours deepen a little, the music changes key, and she shrinks to about half her height. Her proportions are the adult's at that size, and the world is the same world, now large around her.
 
 ## Systems, on the engine
 

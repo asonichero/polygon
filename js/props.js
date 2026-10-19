@@ -109,5 +109,20 @@ function makeBirch() {
   return { root: rootG, twigs, tips };
 }
 
-Object.assign(P, { CHAIR, makeChair, makeTable, makePaddle, BIRCH, makeBirch, woodTexture });
+// ---------------------------------------------------------------------------------------------------------------------------
+// The walking staff: a long, knobby branch with a leather grip, a ferrule at the foot and a knob at the head. Tool-local it runs along y with the grip at the origin (17 below it, 21.5 above).
+// ---------------------------------------------------------------------------------------------------------------------------
+function makeStaff() {
+  const g = new THREE.Group(), wood = woodMat('#9a6a3c', { seed: 29, knot: false }), dark = woodMat('#5e3c20', { seed: 31, knot: false });
+  const rings = [R(-17.0, 0.5, 0.5), R(-16.5, 0.6, 0.6), R(-15.4, 0.55, 0.55), R(-9, 0.62, 0.6), R(-3, 0.68, 0.66), R(3, 0.64, 0.66), R(10, 0.7, 0.68), R(16, 0.66, 0.64), R(19.2, 0.74, 0.72), R(20.4, 1.0, 0.98), R(21.4, 0.82, 0.8)];
+  const sg = loft({ sides: 12, smooth: 1, rings, cap: { top: { h: 0.4, steps: 2 }, bottom: { h: 0.001, steps: 1 } } });
+  g.add(new THREE.Mesh(sg.patch(0, 12, tubeUV(sg, 12, 7, 0.65)), wood));
+  const grip = loft({ sides: 12, smooth: 1, rings: [R(2.8, 0.78, 0.78), R(2.2, 0.86, 0.86), R(-2.4, 0.86, 0.86), R(-3.0, 0.78, 0.78)], cap: CLOSED_LID });
+  g.add(new THREE.Mesh(grip.patch(0, 12, tubeUV(grip, 12, 4, 0.8)), dark));
+  for (const [y, a] of [[-6.5, 0.4], [7.5, -0.6], [13, 1.1]]) { const k = ball(0.62, 0.5, 0.62, 8, 5, [0.5, 0.5]); const m = new THREE.Mesh(k, wood); m.position.set(Math.sin(a) * 0.5, y, Math.cos(a) * 0.5); g.add(m); }       // (the knots)
+  root.Look.decorate(g); root.Look.shade(g); return g;
+}
+const CLOSED_LID = { top: { h: 0.001, steps: 1 }, bottom: { h: 0.001, steps: 1 } };
+
+Object.assign(P, { CHAIR, makeChair, makeTable, makePaddle, makeStaff, BIRCH, makeBirch, woodTexture });
 })(typeof window !== 'undefined' ? window : globalThis);

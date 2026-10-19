@@ -3,7 +3,7 @@ const APP = '0.6.0';      // the version shown beside the build number (the tool
 const VERSION = 'polygon-v060-2';
 const FILES = [
   'game.html', 'models.html', 'lap.html', 'manifest.webmanifest',
-  'js/look.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-paint.js', 'js/poly-face.js', 'js/poly-jack.js', 'js/poly-jack-paint.js', 'js/poly-gerda.js', 'js/poly-gerda-paint.js', 'js/props.js', 'js/world.js', 'js/audio.js', 'js/game.js', 'js/touchui.js', 'js/stage.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/menus.js', 'js/pain.js', 'js/lap-poses.js', 'js/lap.js',
+  'js/look.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-paint.js', 'js/poly-face.js', 'js/poly-jack.js', 'js/poly-jack-paint.js', 'js/poly-gerda.js', 'js/poly-gerda-paint.js', 'js/poly-red.js', 'js/poly-red-paint.js', 'js/props.js', 'js/world.js', 'js/audio.js', 'js/game.js', 'js/touchui.js', 'js/stage.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/menus.js', 'js/pain.js', 'js/lap-poses.js', 'js/lap.js',
   'vendor/three.min.js', 'vendor/OrbitControls.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png',
 ];

@@ -9,7 +9,7 @@ const gradient = { addColorStop() {} };
 const fakeCtx = () => new Proxy({}, { get: (t, k) => k in t ? t[k] : (k === 'createLinearGradient' || k === 'createRadialGradient' ? () => gradient : k === 'getImageData' ? (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) : () => {}), set: (t, k, v) => { t[k] = v; return true; } });
 global.document = { createElement: () => ({ width: 0, height: 0, getContext: () => fakeCtx() }) };
 global.window = global; global.THREE = require(path.join(root, 'vendor', 'three.min.js'));
-for (const f of ['look', 'poly-geo', 'poly', 'poly-paint', 'poly-face', 'poly-jack', 'poly-jack-paint', 'poly-gerda', 'poly-gerda-paint', 'props', 'world', 'stage']) require(path.join(root, 'js', f + '.js'));
+for (const f of ['look', 'poly-geo', 'poly', 'poly-paint', 'poly-face', 'poly-jack', 'poly-jack-paint', 'poly-gerda', 'poly-gerda-paint', 'poly-red', 'poly-red-paint', 'props', 'world', 'stage']) require(path.join(root, 'js', f + '.js'));
 const P = global.Poly, THREE = global.THREE, Look = global.Look, World = global.World, Stage_walker = global.Stage.walker;
 
 const meshes = obj => { const out = []; obj.traverse(o => { if (o.isMesh && !o.userData.hull) out.push(o); }); return out; };
@@ -110,6 +110,14 @@ test('Gerda paints both outfits and every face', () => {
   g.paint({ outfit: 'Fine' }); assert.ok(g.legL.skirtFine.visible && !g.legL.skirtWork.visible && g.bracelets[0].visible && g.anklets[0].visible && g.pinStone.visible);
   g.paint({ outfit: 'Work' }); assert.ok(g.legL.skirtWork.visible && !g.legL.skirtFine.visible && !g.bracelets[0].visible && !g.pinStone.visible);
   assert.equal(P.gerdaExprIndex('stern'), 1);
+});
+test('Red is ready to be the one corrected: every state paints, she has a seat, and her cloak and staff toggle', () => {
+  const r = P.makeRed('Village');
+  for (const outfit of P.OUTFITS.red) for (const trousers of ['up', 'down']) for (const drawers of ['up', 'down']) for (const expr of [0, 4, 7]) assert.doesNotThrow(() => r.paint({ outfit, trousers, drawers, expr, marks: { L: 0.4, R: 0.9 }, hitched: true }));
+  assert.ok(r.seat && r.seat.geometry.attributes.position.count > 0 && r.legL.ring && r.legL.hem);
+  r.paint({ trousers: 'down', hitched: true }); assert.ok(r.legL.ring.visible && !r.legL.hem.visible); r.paint({ trousers: 'up', hitched: false }); assert.ok(!r.legL.ring.visible && r.legL.hem.visible);
+  r.paint({ outfit: 'Mantle' }); assert.ok(r.cape.visible); r.paint({ outfit: 'Village' }); assert.ok(!r.cape.visible);
+  r.holdStaff(true); assert.ok(r.staff.visible && r.fists.R.visible && !r.hands.R.visible); r.holdStaff(false); assert.ok(!r.staff.visible);
 });
 test('Gerda closes her right hand on an implement and opens it again', () => {
   const g = P.makeGerda('Work'); assert.ok(g.hands.R.visible && !g.fists.R.visible && g.hands.L.visible && !g.fists.L.visible);

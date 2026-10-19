@@ -143,11 +143,6 @@ J.paintStatic = function (S, rows) {
     c.fillStyle = grad(c, 0, 0, W, 0, [[0, rgba('#0f2a18', 0.32)], [0.14, rgba('#0f2a18', 0)], [0.86, rgba('#0f2a18', 0)], [1, rgba('#0f2a18', 0.32)]]); c.fillRect(0, 0, W, H);
   });
   // the tunic's waist piece (448 x 112) and the hem solids round the thighs (256 x 96): green, in soft folds, ending in a hem with a line of stitching
-  S.waist.wrapDraw((c, W, H) => {
-    c.fillStyle = grad(c, 0, 0, 0, H, [[0, C.tunic], [0.7, C.tunic], [1, C.tunicDk]]); c.fillRect(0, 0, W, H);
-    folds(c, 0, 0, W, H, 61, 26, C.tunicDk, C.tunicHi, 0.45); strands(c, 0, 0, W, H, 63, 120, C.tunicDk, 0.25);
-    const hy = H * 0.86; c.fillStyle = rgba(C.tunicDk, 0.9); c.fillRect(0, hy, W, H - hy); line(c, 0, hy, W, hy, 2.2, C.leatherHi, 'butt'); stitches(c, 0, hy + 6, W, hy + 6, 6, 4, 1.4, rgba(C.stitch, 0.8));
-  });
   S.hem.wrapDraw((c, W, H) => {
     c.fillStyle = grad(c, 0, 0, 0, H, [[0, C.tunic], [0.75, C.tunic], [1, C.tunicDk]]); c.fillRect(0, 0, W, H);
     folds(c, 0, 0, W, H, 71, 14, C.tunicDk, C.tunicHi, 0.5); strands(c, 0, 0, W, H, 73, 80, C.tunicDk, 0.25);
@@ -175,15 +170,6 @@ J.paintStatic = function (S, rows) {
     strands(c, 0, 0, W, H * 0.4, 6, 24, C.skinSh, 0.3);
   });
   // legs: loose trousers (the thigh's sheet runs from the hip down, the shin's from the knee), and a tall boot with a turned cuff, laces and a sole
-  S.thigh.wrapDraw((c, W, H) => {
-    c.fillStyle = grad(c, 0, 0, W, 0, [[0, shade(C.trousers, 0.84)], [0.25, C.trousers], [0.5, C.trousersHi], [0.75, C.trousers], [1, shade(C.trousers, 0.84)]]); c.fillRect(0, 0, W, H);
-    folds(c, 0, 0, W, H, 91, 6, C.trousersDk, C.trousersHi, 0.16); strands(c, 0, 0, W, H, 12, 90, C.trousersDk, 0.22);
-  });
-  S.shin.wrapDraw((c, W, H) => {
-    c.fillStyle = grad(c, 0, 0, W, 0, [[0, shade(C.trousers, 0.84)], [0.25, C.trousers], [0.5, C.trousersHi], [0.75, C.trousers], [1, shade(C.trousers, 0.84)]]); c.fillRect(0, 0, W, H);
-    folds(c, 0, 0, W, H, 93, 6, C.trousersDk, C.trousersHi, 0.16); strands(c, 0, 0, W, H, 14, 60, C.trousersDk, 0.22);
-    c.fillStyle = C.boot; c.fillRect(0, H * 0.5, W, H * 0.5);
-  });
   S.boot.wrapDraw((c, W, H) => {
     c.fillStyle = grad(c, 0, 0, 0, H, [[0, C.bootHi], [0.4, C.boot], [1, C.bootDk]]); c.fillRect(0, 0, W, H);
     c.fillStyle = grad(c, 0, 0, 0, H * 0.3, [[0, C.leatherHi], [1, C.leather]]); c.fillRect(0, 0, W, H * 0.3); line(c, 0, H * 0.3, W, H * 0.3, 2.5, C.bootDk, 'butt'); stitches(c, 0, H * 0.1, W, H * 0.1, 8, 5, 1.8, rgba(C.stitch, 0.75)); stitches(c, 0, H * 0.24, W, H * 0.24, 8, 5, 1.8, rgba(C.stitch, 0.75));
@@ -217,6 +203,57 @@ J.paintStatic = function (S, rows) {
     folds(c, 0, 0, W, H, 15, 12, C.capeDk, C.capeHi, 0.5); strands(c, 0, 0, W, H, 16, 120, C.capeDk, 0.25);
     const hy = H * 0.82; line(c, 0, hy, W, hy, 3, C.gold, 'butt'); line(c, 0, hy + 5, W, hy + 5, 1.2, C.goldDk, 'butt');
     for (let x = 14; x < W; x += 34) embroidered(c, x, hy + 18, 7, 0.1);
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// What depends on what she has on (as in the correction scene): trousers up or down, drawers up or down, the marks on the bare skin; legs, the waist piece and the seat
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+C.drawers = '#f4ecd6'; C.drawersSh = '#d8cba8'; C.seat = '#f9c8a6'; C.seatSh = '#e8a283';
+const garmentAt = (down, dd, d) => !down ? 'trousers' : d < 2 ? (dd ? 'skin' : 'drawers') : d < 4 ? 'drawers' : 'trousers';
+const flushOn = K.flush;
+J.paintLegs = function (S, down, dd, marks, rows) {
+  S.thigh.wrapDraw((c, W, H) => {
+    const unit = py => -rows.thighY(py);                                          // (how far below the hip joint a row of the sheet is)
+    for (let y = 0; y < H; y += 2) {
+      const what = garmentAt(down, dd, Math.max(0, unit(y))), base = what === 'skin' ? C.skin : what === 'drawers' ? C.drawers : C.trousers, hi = what === 'skin' ? C.skinHi : what === 'drawers' ? '#ffffff' : C.trousersHi;
+      c.fillStyle = grad(c, 0, 0, W, 0, [[0, shade(base, 0.84)], [0.25, base], [0.5, hi], [0.75, base], [1, shade(base, 0.84)]]); c.fillRect(0, y, W, 2.5);
+    }
+    folds(c, 0, 0, W, H, 91, 6, C.trousersDk, C.trousersHi, 0.16); strands(c, 0, 0, W, H, 12, 90, C.trousersDk, 0.22);
+    if (down) for (let y = H * 0.78; y < H; y += 8) line(c, 0, y, W, y, 3.5, rgba(C.trousersDk, 0.8), 'butt');
+    if (down) { const ys = []; for (let y = 0; y < H; y += 2) if (garmentAt(down, dd, Math.max(0, unit(y))) === 'skin') ys.push(y); if (ys.length) { const y0 = ys[0], y1 = ys[ys.length - 1] + 3, m = (marks.L + marks.R) / 2; flushOn(c, 0, y0, W * 0.2, y1 - y0, m, 17); flushOn(c, W * 0.8, y0, W * 0.2, y1 - y0, m, 19); } }
+  });
+  S.shin.wrapDraw((c, W, H) => {
+    c.fillStyle = grad(c, 0, 0, W, 0, [[0, shade(C.trousers, 0.84)], [0.25, C.trousers], [0.5, C.trousersHi], [0.75, C.trousers], [1, shade(C.trousers, 0.84)]]); c.fillRect(0, 0, W, H);
+    folds(c, 0, 0, W, H, 93, 6, C.trousersDk, C.trousersHi, 0.16); strands(c, 0, 0, W, H, 14, 60, C.trousersDk, 0.22);
+    c.fillStyle = C.boot; c.fillRect(0, H * 0.5, W, H * 0.5);
+  });
+};
+// the waist piece: the tunic down to its hem, then (hitched up over her back) trousers, drawers or bare skin below it
+J.paintWaist = function (S, hitched, down, dd, marks, rows) {
+  const what = !down ? 'trousers' : !dd ? 'drawers' : 'skin', col = { trousers: C.trousers, drawers: C.drawers, skin: C.seat }[what];
+  S.waist.wrapDraw((c, W, H) => {
+    c.fillStyle = grad(c, 0, 0, 0, H, [[0, C.tunic], [0.7, C.tunic], [1, C.tunicDk]]); c.fillRect(0, 0, W, H);
+    folds(c, 0, 0, W, H, 61, 26, C.tunicDk, C.tunicHi, 0.45); strands(c, 0, 0, W, H, 63, 120, C.tunicDk, 0.25);
+    const hy = H * 0.86; c.fillStyle = rgba(C.tunicDk, 0.9); c.fillRect(0, hy, W, H - hy); line(c, 0, hy, W, hy, 2.2, C.leatherHi, 'butt'); stitches(c, 0, hy + 6, W, hy + 6, 6, 4, 1.4, rgba(C.stitch, 0.8));
+    if (hitched) {
+      const yb = H * rows.waist(1.3);                                                   // (the tunic's hem, as it lies hitched up over her back)
+      c.fillStyle = grad(c, 0, yb, 0, H, [[0, shade(col, 1.0)], [1, shade(col, 0.86)]]); c.fillRect(0, yb, W, H - yb);
+      c.fillStyle = grad(c, 0, yb, W, yb, [[0, shade(col, 0.86)], [0.5, what === 'trousers' ? C.trousersHi : shade(col, 1.04)], [1, shade(col, 0.86)]]); c.fillRect(0, yb, W, H - yb);
+      c.fillStyle = rgba(C.tunicDk, 0.95); c.fillRect(0, yb - 6, W, 6); line(c, 0, yb - 6, W, yb - 6, 2.2, C.leatherHi, 'butt'); stitches(c, 0, yb - 12, W, yb - 12, 6, 4, 1.4, rgba(C.stitch, 0.8));
+      if (what === 'trousers') line(c, W / 2, yb, W / 2, H, 3, rgba(C.trousersDk, 0.8), 'butt');
+      if (what === 'skin') for (const [m, x0, x1, seed] of [[marks.L, 0, W * 0.12, 11], [marks.R, W * 0.88, W, 13]]) flushOn(c, x0, yb, x1 - x0, H - yb, m, seed);
+    }
+  });
+};
+J.paintSeat = function (Sx, down, dd, marks) {
+  const what = !down ? 'trousers' : !dd ? 'drawers' : 'skin';
+  const base = { trousers: C.trousers, drawers: C.drawers, skin: C.seat }[what], hi = { trousers: C.trousersHi, drawers: '#ffffff', skin: '#fddcc4' }[what], seam = { trousers: C.trousersDk, drawers: C.drawersSh, skin: C.seatSh }[what];
+  Sx.draw((c, W, H) => {
+    for (const x0 of [0, W / 2]) { c.fillStyle = grad(c, x0, 0, x0 + W / 2, 0, [[0, shade(base, 0.86)], [0.5, hi], [1, shade(base, 0.86)]]); c.fillRect(x0, 0, W / 2, H); }
+    c.fillStyle = grad(c, 0, 0, 0, H, [[0, rgba('#fff', 0)], [1, rgba(seam, 0.55)]]); c.fillRect(0, 0, W, H);
+    line(c, W / 2, 0, W / 2, H, 5, rgba(seam, 0.9), 'butt'); strands(c, 0, 0, W, H, 3, 60, seam, 0.25);
+    if (what === 'skin') { flushOn(c, 0, 0, W / 2, H, marks.R, 3); flushOn(c, W / 2, 0, W / 2, H, marks.L, 5); }
   });
 };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -110,13 +110,16 @@
 <script src="js/poly-jack-paint.js"></script>
 <script src="js/poly-gerda.js"></script>
 <script src="js/poly-gerda-paint.js"></script>
+<script src="js/poly-red.js"></script>
+<script src="js/poly-red-paint.js"></script>
 <script src="js/props.js"></script>
 <script src="js/world.js"></script>
 <script src="js/lap-poses.js"></script>
 <script src="js/lap.js"></script>
 <script>
 (function () {
-  var L = Lap.create(document.getElementById('view')), st = L.st, $ = function (id) { return document.getElementById(id); };
+  var WHO = /[?&]who=red\b/.test(location.search) ? { key: 'red', name: 'Red', safe: 'Briar', title: 'Red and her mother' } : { key: 'jack', name: 'Jack', safe: 'Red', title: '' };
+  var L = Lap.create(document.getElementById('view'), { receiver: WHO.key }), st = L.st, $ = function (id) { return document.getElementById(id); };
   var PACE = [0.5, 0.7, 1, 1.4, 2], STR = [0.5, 0.75, 1, 1.25, 1.5], idx = { pace: 2, strength: 2 };
   function btn(box, label, fn, key) { var b = document.createElement('button'); b.textContent = label; b.dataset.k = key; b.onclick = fn; $(box).appendChild(b); return b; }
   // Gerda's face: calm, stern or laughing
@@ -171,13 +174,14 @@
     [['pOutline', 'outline'], ['pBloom', 'bloom'], ['pShadows', 'shadows']].forEach(function (p) { var b = $(p[0]); b.classList.toggle('on', !!R[p[1]]); b.onclick = function () { var o = {}; o[p[1]] = !R[p[1]]; R.set(o); b.classList.toggle('on', !!R[p[1]]); }; });
   })();
   addEventListener('keydown', function (e) { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); L.smack(); } });
-  var LINES = ['Jack takes it with a grin.', 'He flinches, but keeps his grin.', 'He squirms, the grin gone.', 'He kicks and yelps, close to the edge.', 'He is past the edge now: begging, and most receptive.', 'Too harsh.'];
+  var LINES = WHO.key === 'red' ? ['Red takes it, composed.', 'She flinches, and bites her lip.', 'She squirms, her composure gone.', 'She kicks and yelps, close to the edge.', 'She is past the edge now: begging, and most receptive.', 'Too harsh.'] : ['Jack takes it with a grin.', 'He flinches, but keeps his grin.', 'He squirms, the grin gone.', 'He kicks and yelps, close to the edge.', 'He is past the edge now: begging, and most receptive.', 'Too harsh.'];
+  if (WHO.key === 'red') { document.title = 'Polygon — Red and her mother'; document.querySelector('#panel .sub').textContent = 'Her mother (Gerda) gives, Red receives. Drag to orbit, scroll to zoom, right-drag to pan. Space smacks. The safe word is Briar.'; document.querySelectorAll('#panel h3').forEach(function (h) { h.textContent = h.textContent.replace("Jack's size", "Red's size").replace('Jack', 'Red').replace("Gerda's face", "Her mother's face"); }); document.querySelectorAll('#panel .sub').forEach(function (d) { if (d.textContent === 'Jack') d.textContent = 'Red'; if (d.textContent === 'Gerda') d.textContent = 'Her mother'; }); }
   L.on(function (type, d) {
     if (type === 'hit') $('line').textContent = LINES[L.bandIndex()];
     if (type === 'tooharsh') $('line').textContent = 'That is too harsh. Nothing more is struck; end the correction.';
     if (type === 'end') {
       var e = $('end'); e.hidden = false;
-      e.innerHTML = d.red ? '<b>“Red.”</b> The scene stops at once; Jack is helped up. Nothing is held against him.' : '<b>Done.</b> ' + d.hits + ' smack' + (d.hits === 1 ? '' : 's') + '; he was brought as far as <b>' + L.BANDS[d.peak < 0.3 ? 0 : d.peak < 0.6 ? 1 : d.peak < 0.9 ? 2 : d.peak < 1 ? 3 : d.peak < 1.5 ? 4 : 5] + '</b>.';
+      e.innerHTML = d.red ? '<b>“' + WHO.safe + '.”</b> The scene stops at once; ' + WHO.name + ' is helped up. Nothing is held against ' + (WHO.key === 'red' ? 'her' : 'him') + '.' : '<b>Done.</b> ' + d.hits + ' smack' + (d.hits === 1 ? '' : 's') + '; he was brought as far as <b>' + L.BANDS[d.peak < 0.3 ? 0 : d.peak < 0.6 ? 1 : d.peak < 0.9 ? 2 : d.peak < 1 ? 3 : d.peak < 1.5 ? 4 : 5] + '</b>.';
     }
     if (type === 'reset') $('line').textContent = '';
   });

@@ -61,7 +61,8 @@ function create(view, opts) {
   let jackFull = opts.jackFull || JACK_FULL;
 
   // ── The cast ────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  const gerda = B.makeGerda(), jack = B.makeJack();
+  const receiverKey = opts.receiver === 'red' ? 'red' : 'jack';        // (who is being corrected: Jack, or Red; the giver is Gerda, who is Red's mother in her game)
+  const gerda = B.makeGerda(), jack = receiverKey === 'red' ? B.makeRed('Village') : B.makeJack();
   stage.add(gerda.root);
   const frame = new THREE.Group(); frame.add(jack.root); stage.add(frame);
   // Jack's frame: local +y (his head) runs along world +x, his front faces down, then the whole body is tipped head-down by PITCH.
@@ -99,7 +100,7 @@ function create(view, opts) {
   // ── The session ─────────────────────────────────────────────────────────────────────────────────────────────────────────
   const pain = S.createPain({ tolerance: 1, resilience: 0.7 });       // (Jack at full size: the edge of resistance comes slowly; a smaller Jack feels each smack more, see impact)
   const st = {
-    outfit: { gerda: 'Work', jack: 'Outdoor' }, lean: LEAN, size: 1, implement: 'hand', pace: 1, strength: 1, side: 'alt', nextSide: 'R',
+    outfit: { gerda: 'Work', jack: receiverKey === 'red' ? 'Village' : 'Outdoor' }, lean: LEAN, size: 1, implement: 'hand', pace: 1, strength: 1, side: 'alt', nextSide: 'R',
     trousers: 'up', drawers: 'up', marks: { L: 0, R: 0 }, expr: 0,
     hits: 0, ended: false, red: false, peak: 0, swing: null, runLeft: 0, gap: 0, sound: true, last: null,
     from: 'lap', to: 'lap', blend: 1, blendSecs: 1, giverStance: 'sit', shinsSeated: true, armed: true, cover: 0, fumble: 0, place: 'lap', freeOn: true,
@@ -551,7 +552,7 @@ function create(view, opts) {
   // ── Frame loop ──────────────────────────────────────────────────────────────────────────────────────────────────────────
   function repaint() {
     st.expr = exprFor();
-    jack.paint({ trousers: st.trousers, drawers: st.drawers, marks: st.marks, expr: st.expr, outfit: st.outfit.jack, hitched: true });
+    jack.paint({ trousers: st.trousers, drawers: st.drawers, marks: st.marks, expr: receiverKey === 'red' ? [0, 4, 7, 7][st.expr] : st.expr, outfit: st.outfit.jack, hitched: true });       // (Red's faces for the bands: calm, sheepish, wince, wince)
     gerda.paint({ outfit: st.outfit.gerda, expr: st.gerdaExpr || 0 });
     dirty = false;
   }
@@ -811,11 +812,11 @@ function create(view, opts) {
     // Wardrobe: Jack has Outdoor, Day, Soft and Fine; Gerda Work or Fine (B.OUTFITS).
     outfit(who, name) {
       if (who === 'gerda' && B.OUTFITS.gerda.indexOf(name) >= 0) { st.outfit.gerda = name; dirty = true; }
-      if (who === 'jack' && B.OUTFITS.jack.indexOf(name) >= 0) { st.outfit.jack = name; dirty = true; }
+      if (who === 'jack' && B.OUTFITS[receiverKey].indexOf(name) >= 0) { st.outfit.jack = name; dirty = true; }
     },
     // Gerda's face: 0 calm, 1 stern, 2 laughing.
     gerdaExpr(e) { st.gerdaExpr = e; dirty = true; },
-    outfits: B.OUTFITS,
+    outfits: Object.assign({}, B.OUTFITS, { jack: B.OUTFITS[receiverKey] }), receiver: receiverKey,
     clearMarks() { st.marks = { L: 0, R: 0 }; dirty = true; },
     implement(name) { if (!IMPL[name] || (st.swing && st.swing.phase !== 'freeze')) return; st.implement = name; },
     layers(o) { Object.assign(st, o); dirty = true; },

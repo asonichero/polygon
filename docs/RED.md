@@ -18,6 +18,8 @@ This is the design as it stands. It is written so that the engine's pieces (the 
 * **The corrections stay what the engine already makes them**: consensual, between adult characters, not explicit. The shell keeps its 18+ notice. Red always chooses them (she asks, in the prologue's last scene, to be held to account), and the game has a safe word that stops a scene at once. The engine's safe word is "Red", which is also her name, so the game uses its own, **Briar**.
 * Everyone she is corrected by is an adult, and looks it.
 
+**Status:** Red and her mother are ready for the correction viewer: `lap.html?who=red` puts Red in the corrected's place across her mother's lap (the mother is Gerda's model for now) and over the table, with every clothes state, the marks and the engine's pain model, and the game's safe word, Briar.
+
 ## The Starweave Mantle
 
 A waist-length red cloak with a hood and gold stars worked along its hem. In the game it is three things:

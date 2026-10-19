@@ -44,7 +44,7 @@ const mirrored = (g, sheet, side, o) => { const f = P.loftUV(g, sheet, o), N = g
 // ---------------------------------------------------------------------------------------------------------------------------
 function makeRed(outfit) {
   const atlas = new P.Atlas(1024, 1024), S = atlas.pack([['ear', 64, 80], ['face', 352, 384], ['shell', 320, 192], ['hair', 256, 128], ['cap', 256, 160], ['braid', 128, 96], ['neck', 160, 88],
-    ['torso', 448, 224], ['waist', 448, 112], ['arm', 152, 176], ['fore', 128, 112], ['handL', 128, 128], ['handR', 128, 128], ['thigh', 232, 232], ['shin', 176, 208], ['boot', 192, 96], ['shoe', 224, 112], ['hem', 256, 96], ['cape', 448, 224], ['hood', 192, 128], ['trim', 64, 16]]);
+    ['torso', 448, 224], ['waist', 448, 112], ['arm', 152, 176], ['fore', 128, 112], ['handL', 128, 128], ['handR', 128, 128], ['thigh', 232, 232], ['shin', 176, 208], ['boot', 192, 96], ['shoe', 224, 112], ['hem', 256, 96], ['seat', 256, 112], ['cape', 448, 224], ['hood', 192, 128], ['trim', 64, 16]]);
   for (const n of ['neck', 'torso', 'waist', 'arm', 'fore', 'handL', 'handR', 'thigh', 'shin', 'boot', 'shoe', 'hem', 'hair', 'cap', 'braid']) S[n].wraps = true;
   const rig = P.skeleton(), { mat, two } = P.materials(atlas), add = P.add;
   rig.atlas = atlas; rig.sheets = S; rig.kind = 'red';
@@ -146,6 +146,13 @@ function makeRed(outfit) {
     const cxs = -side * 0.6, rxd = d => 2.3 + 0.1 * d, rzd = d => 2.3 + 0.08 * d;
     const sk = loft({ sides: 20, smooth: 1, rings: [-0.7, 1.6, 3.2, 4.8].map(d => R(-d, rxd(d), rzd(d), 0, 1, cxs)), cap: { top: { h: 0.001, steps: 1 }, bottom: { h: 0.3, steps: 2 } } });
     leg.hem = mk(sk.patch(0, 20, mirrored(sk, S.hem, side)), leg.thigh, mat, 'tunicHem');
+    const ringG = loft({ sides: 16, smooth: 1, rings: [R(1.3, 1.62, 1.74), R(0.2, 1.98, 2.1), R(-1.0, 1.62, 1.74)], cap: CLOSED });
+    leg.ring = mk(ringG.patch(0, 16, () => S.thigh.texel(4, 150)), leg.knee, mat, 'ring'); leg.ring.visible = false;       // (trousers bunched at the knee when they are down)
+  }
+  {                                                                                      // the seat (correction scene): two rounded cheeks bridging her back and thighs, built in the hinge's frame (see js/lap.js)
+    const cheeks = [];
+    for (const sg of [1, -1]) { const b = ball(2.15, 2.25, 2.3, 14, 9, (i, k, x, y) => S.seat.uv((sg > 0 ? 0.5 : 0) + (0.5 + x / 4.3) * 0.5, clamp(0.5 - y / 4.5, 0, 1))); cheeks.push(place(b, sg * 1.85, -2.3, 2.35)); }
+    rig.seat = new THREE.Mesh(merge(cheeks), mat); rig.seat.name = 'seat';
   }
   rig.rows.thighY = P.yOfRow(th, S.thigh.h, -9.2, 2.2); rig.rows.shinY = P.yOfRow(sh, S.shin.h, -9, 1);
 
@@ -173,10 +180,13 @@ function makeRed(outfit) {
   const keys = {};
   const once = (name, key, fn) => { if (keys[name] === key) return false; keys[name] = key; fn(); return true; };
   rig.paint = function (st) {
-    st = Object.assign({ outfit: rig.look ? rig.look.outfit : outfit || 'Village', expr: 0 }, st);
-    const of = OUTFITS.indexOf(st.outfit) >= 0 ? st.outfit : 'Village', ex = redExprIndex(st.expr); let changed = false;
+    st = Object.assign({ outfit: rig.look ? rig.look.outfit : outfit || 'Village', expr: 0, trousers: 'up', drawers: 'up', marks: { L: 0, R: 0 }, hitched: false }, st);
+    const of = OUTFITS.indexOf(st.outfit) >= 0 ? st.outfit : 'Village', ex = redExprIndex(st.expr), down = st.trousers === 'down', dd = st.drawers === 'down', mk_ = m => Math.round(clamp(m, 0, 1) * 40); let changed = false;
     changed = once('face', ex, () => J.paintFace(S.face, ex)) || changed;
     changed = once('static', 'all', () => J.paintStatic(S, rig.rows)) || changed;
+    const lk = [st.trousers, st.drawers, mk_(st.marks.L), mk_(st.marks.R), !!st.hitched].join('|');
+    changed = once('legs', lk, () => { J.paintLegs(S, down, dd, st.marks, rig.rows); J.paintWaist(S, !!st.hitched, down, dd, st.marks, rig.rows); J.paintSeat(S.seat, down, dd, st.marks); }) || changed;
+    for (const k of ['legL', 'legR']) { rig[k].hem.visible = !st.hitched; rig[k].ring.visible = down; }
     rig.cape.visible = of === 'Mantle';
     for (const g of [rig.sway.braidL, rig.sway.braidR]) g.position.z = (of === 'Mantle' ? 0.9 : 0) - 0.3;       // (over the cloak, the braids hang a little further out)
     if (changed) { for (const sh2 of Object.values(S)) sh2.bleed(!!sh2.wraps); atlas.touch(); }

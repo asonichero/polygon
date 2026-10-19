@@ -151,7 +151,7 @@ function makeRed(outfit) {
   }
   {                                                                                      // the seat (correction scene): two rounded cheeks bridging her back and thighs, built in the hinge's frame (see js/lap.js)
     const cheeks = [];
-    for (const sg of [1, -1]) { const b = ball(2.15, 2.25, 2.3, 14, 9, (i, k, x, y) => S.seat.uv((sg > 0 ? 0.5 : 0) + (0.5 + x / 4.3) * 0.5, clamp(0.5 - y / 4.5, 0, 1))); cheeks.push(place(b, sg * 1.85, -2.3, 2.35)); }
+    for (const sg of [1, -1]) { const b = ball(2.4, 3.5, 2.6, 14, 9, (i, k, x, y) => S.seat.uv((sg > 0 ? 0.5 : 0) + (0.5 + x / 4.6) * 0.5, clamp(0.5 - (y + 0.9) / 7, 0, 1))); cheeks.push(place(b, sg * 1.6, -1.2, 2.45)); }   // (tall and close, so the waist piece's base never shows over or between them)
     rig.seat = new THREE.Mesh(merge(cheeks), mat); rig.seat.name = 'seat';
   }
   rig.rows.thighY = P.yOfRow(th, S.thigh.h, -9.2, 2.2); rig.rows.shinY = P.yOfRow(sh, S.shin.h, -9, 1);

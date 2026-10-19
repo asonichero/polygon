@@ -9,8 +9,8 @@ const gradient = { addColorStop() {} };
 const fakeCtx = () => new Proxy({}, { get: (t, k) => k in t ? t[k] : (k === 'createLinearGradient' || k === 'createRadialGradient' ? () => gradient : k === 'getImageData' ? (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) : () => {}), set: (t, k, v) => { t[k] = v; return true; } });
 global.document = { createElement: () => ({ width: 0, height: 0, getContext: () => fakeCtx() }) };
 global.window = global; global.THREE = require(path.join(root, 'vendor', 'three.min.js'));
-for (const f of ['look', 'poly-geo', 'poly', 'poly-paint', 'poly-face', 'poly-jack', 'poly-jack-paint', 'poly-gerda', 'poly-gerda-paint', 'props', 'world']) require(path.join(root, 'js', f + '.js'));
-const P = global.Poly, THREE = global.THREE, Look = global.Look, World = global.World;
+for (const f of ['look', 'poly-geo', 'poly', 'poly-paint', 'poly-face', 'poly-jack', 'poly-jack-paint', 'poly-gerda', 'poly-gerda-paint', 'props', 'world', 'stage']) require(path.join(root, 'js', f + '.js'));
+const P = global.Poly, THREE = global.THREE, Look = global.Look, World = global.World, Stage_walker = global.Stage.walker;
 
 const meshes = obj => { const out = []; obj.traverse(o => { if (o.isMesh && !o.userData.hull) out.push(o); }); return out; };
 
@@ -56,12 +56,19 @@ test('a rounded box is closed, faces outward everywhere, and its normals are exa
 });
 
 for (const [name, make] of [['Jack', () => P.makeJack()], ['Gerda', () => P.makeGerda('Work')]]) {
-  test(`${name}: the skeleton is the one the correction scene was tuned on`, () => {
-    const r = make();
+  test(`${name}: the skeleton follows Poly.DIM, and its proportions are a grown person's`, () => {
+    const r = make(), D = P.DIM;
     for (const k of ['root', 'hips', 'torso', 'pelvis', 'neck', 'armL', 'armR', 'elbow', 'elbowL', 'wrist', 'wristL', 'legL', 'legR', 'paint', 'apply', 'stretchShins', 'atlas']) assert.ok(r[k], k);
-    assert.equal(r.neck.position.y, 12); assert.equal(r.pelvis.position.y, 1.5); assert.equal(r.armL.position.x, 5.5); assert.equal(r.armR.position.x, -5.5); assert.equal(r.armL.position.y, 10);
-    assert.equal(r.elbow.position.y, -4); assert.equal(r.legL.knee.position.y, -6); assert.equal(r.legL.thigh.position.x, 2); assert.equal(r.legR.thigh.position.x, -2);
+    assert.equal(r.neck.position.y, D.neck); assert.equal(r.pelvis.position.y, 1.5); assert.equal(r.armL.position.x, D.shoulderX); assert.equal(r.armR.position.x, -D.shoulderX); assert.equal(r.armL.position.y, D.shoulderY);
+    assert.equal(r.elbow.position.y, -D.upper); assert.equal(r.legL.knee.position.y, -D.thigh); assert.equal(r.legL.thigh.position.x, D.hipX); assert.equal(r.legR.thigh.position.x, -D.hipX);
     assert.equal(r.armL.userData.sign, 1); assert.equal(r.armR.userData.sign, -1); assert.equal(r.legL.sign, 1);
+    // natural proportions: long legs, shoulders set well below the head and not wide, fingertips at mid-thigh, a head a sixth of the height
+    P.setPose(r, 'stand'); for (let i = 0; i < 40; i++) P.step(r, 0.1); r.root.updateMatrixWorld(true);
+    const H = new THREE.Box3().setFromObject(r.root).getSize(new THREE.Vector3()).y, head = new THREE.Box3().setFromObject(r.neck.children.find(o => o.name === 'head')).getSize(new THREE.Vector3()).y, tip = D.hipY + D.shoulderY - (D.upper + D.fore + D.hand);
+    assert.ok((D.thigh + D.shin) / H > 0.46 && (D.thigh + D.shin) / H < 0.52, 'the legs are about half the height: ' + (D.thigh + D.shin) / H);
+    assert.ok(D.neck - D.shoulderY >= 2.8 && D.shoulderX < 0.35 * D.neck, 'the shoulders sit low and narrow: ' + (D.neck - D.shoulderY));
+    assert.ok(tip < D.hipY - 2 && tip > D.hipY - D.thigh, 'the fingertips hang to mid-thigh: ' + tip);
+    assert.ok(head / H > 0.15 && head / H < 0.22, 'the head is about a sixth of the height: ' + head / H);
   });
   test(`${name}: geometry is finite, UVs lie inside the atlas, and the triangle budget holds`, () => {
     const r = make(), tris = P.triCount(r.root);
@@ -79,12 +86,12 @@ for (const [name, make] of [['Jack', () => P.makeJack()], ['Gerda', () => P.make
   test(`${name}: standing, the feet are on the floor and the head is at the top`, () => {
     const r = make(); P.setPose(r, 'stand'); for (let i = 0; i < 40; i++) P.step(r, 0.1); r.root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(r.root);
-    assert.ok(Math.abs(box.min.y) < 0.8, 'feet at the floor: ' + box.min.y); assert.ok(box.max.y > 30 && box.max.y < 35.5, 'a standing figure is about 32 tall: ' + box.max.y);
+    assert.ok(Math.abs(box.min.y) < 0.8, 'feet at the floor: ' + box.min.y); assert.ok(box.max.y > 33.5 && box.max.y < 37, 'a standing figure is about 35 tall: ' + box.max.y);
   });
   test(`${name}: sitting lowers the hips and folds the legs forward`, () => {
     const r = make(); P.setPose(r, 'sit'); for (let i = 0; i < 40; i++) P.step(r, 0.1);
-    assert.ok(Math.abs(r.hips.position.y - 6) < 0.05); assert.ok(r.legL.thigh.rotation.x < -1.5 && r.legL.knee.rotation.x > 1.5);
-    P.stretchShins(r, 2); assert.equal(r.legL.shin.scale.y, 2); assert.equal(r.legR.foot.position.y, 6 - 12); P.setPose(r, 'stand'); assert.equal(r.legL.shin.scale.y, 1);
+    assert.ok(Math.abs(r.hips.position.y - P.DIM.sitHipY) < 0.05); assert.ok(r.legL.thigh.rotation.x < -1.5 && r.legL.knee.rotation.x > 1.5);
+    P.stretchShins(r, 2); assert.equal(r.legL.shin.scale.y, 2); assert.equal(r.legR.foot.position.y, P.DIM.shin - 2 * P.DIM.shin); P.setPose(r, 'stand'); assert.equal(r.legL.shin.scale.y, 1);
   });
 }
 
@@ -103,6 +110,22 @@ test('Gerda paints both outfits and every face', () => {
   g.paint({ outfit: 'Fine' }); assert.ok(g.legL.skirtFine.visible && !g.legL.skirtWork.visible && g.bracelets[0].visible && g.anklets[0].visible && g.pinStone.visible);
   g.paint({ outfit: 'Work' }); assert.ok(g.legL.skirtWork.visible && !g.legL.skirtFine.visible && !g.bracelets[0].visible && !g.pinStone.visible);
   assert.equal(P.gerdaExprIndex('stern'), 1);
+});
+test('Gerda closes her right hand on an implement and opens it again', () => {
+  const g = P.makeGerda('Work'); assert.ok(g.hands.R.visible && !g.fists.R.visible && g.hands.L.visible && !g.fists.L.visible);
+  g.grip(true); assert.ok(!g.hands.R.visible && g.fists.R.visible && g.hands.L.visible, 'only the right hand closes'); g.grip(false); assert.ok(g.hands.R.visible && !g.fists.R.visible);
+  const fist = new THREE.Box3().setFromObject(g.fists.R), hand = new THREE.Box3().setFromObject(g.hands.R); assert.ok(fist.getSize(new THREE.Vector3()).y < hand.getSize(new THREE.Vector3()).y, 'a fist is shorter than a hand');
+});
+test('the walk plants a foot on the ground at every speed and every moment of the stride, and crouching lowers the hips', () => {
+  const j = P.makeJack(); Stage_walker(j); const w = j.walk, D = P.DIM, sole = leg => new THREE.Box3().setFromObject(leg.foot).min.y;
+  P.setPose(j, 'stand'); for (let i = 0; i < 40; i++) P.step(j, 0.1);
+  for (const v of [0, 7.5, 26, 50]) for (let ph = 0; ph < 6.3; ph += 0.35) {
+    w.speed = v; w.phase = ph; w.sneak = false; j.apply(); j.root.updateMatrixWorld(true);
+    const low = Math.min(sole(j.legL), sole(j.legR)); assert.ok(Math.abs(low) < 0.6, `at speed ${v}, phase ${ph.toFixed(2)} the lowest sole is ${low.toFixed(2)} from the ground`);
+  }
+  w.speed = 0; w.sneak = true; j.apply(); assert.ok(j.hips.position.y < D.hipY - 1 && j.hips.position.y > D.hipY - 4, 'creeping stands lower: ' + j.hips.position.y);
+  w.sneak = false; w.speed = 26; j.apply(); const bob = []; for (let ph = 0; ph < 6.3; ph += 0.2) { w.phase = ph; j.apply(); bob.push(j.hips.position.y); } assert.ok(Math.max(...bob) - Math.min(...bob) < 2.5 && Math.max(...bob) <= D.hipY + 0.5, 'the hips bob a little, and ride no higher than standing');
+  const p0 = w.phase; w.speed = 26; w.advance(0.1); assert.ok(w.phase > p0, 'the stride advances with the ground'); w.speed = 0; const p1 = w.phase; w.advance(0.1); assert.equal(w.phase, p1, 'and stands still when he does');
 });
 test('Gerda: the painters can find a height on the torso and the waist piece, and the hair and bun are there', () => {
   const g = P.makeGerda('Work');
@@ -133,7 +156,7 @@ test('ink: every mesh gets one hull on its own geometry, props included, and box
   const on = box.geometry.attributes.outlineNormal, p = box.geometry.attributes.position; assert.ok(on && on.count === p.count);
   for (let i = 0; i < p.count; i++) assert.ok(on.getX(i) * p.getX(i) + on.getY(i) * p.getY(i) + on.getZ(i) * p.getZ(i) > 0, 'a corner pushes outward');
   assert.equal(P.triCount(grp), 24, 'the hull is not counted among the triangles');
-  for (const o of [P.makeChair(), P.makeTable(-6, 14.2), P.makePaddle(), P.makeBirch().root]) { let any = 0; o.traverse(m => { if (m.isMesh && m.userData.hull) any++; }); assert.ok(any > 0, 'a prop is inked'); }
+  for (const o of [P.makeChair(), P.makeTable(-4.6, 18), P.makePaddle(), P.makeBirch().root]) { let any = 0; o.traverse(m => { if (m.isMesh && m.userData.hull) any++; }); assert.ok(any > 0, 'a prop is inked'); }
 });
 
 test('Look.rig lights a scene: a sun with a shadow, a hemisphere, fog and a sky, and it fits the sun to a place', () => {
@@ -147,8 +170,8 @@ test('the props build: the chair has the dimensions the lap scene counts on; the
   assert.ok(Math.abs(box.min.y + P.CHAIR.legH) < 0.1, 'the legs reach down to -legH: ' + box.min.y); assert.ok(box.max.y > 16 && box.max.y < 18, 'the back posts rise to about 17: ' + box.max.y);
   assert.ok(Math.abs(box.max.x - 7.2) < 0.7 && box.min.z < -6 && box.max.z > 5.5, 'about as wide as it is deep: ' + [box.max.x, box.min.z, box.max.z]);
   const b = P.makeBirch(); assert.equal(b.tips.length, 19); assert.equal(b.twigs.position.y, -P.BIRCH.hand);
-  const t = new THREE.Box3().setFromObject(P.makeTable(-6, 14.2)); assert.ok(Math.abs(t.max.y - (-6 + 14.2)) < 0.05 && Math.abs(t.min.y + 6) < 0.15, 'the table top is where the lap scene puts Jack: ' + t.max.y);
-  const pb = new THREE.Box3().setFromObject(P.makePaddle({ handle: 1.2, bladeL: 4.5, bladeW: 4 })); assert.ok(pb.min.y < -5.5 && pb.min.y > -7.5 && pb.max.x > 1.9, 'a short handle and a blade along -y');
+  const t = new THREE.Box3().setFromObject(P.makeTable(-4.6, 18)); assert.ok(Math.abs(t.max.y - (-4.6 + 18)) < 0.05 && Math.abs(t.min.y + 4.6) < 0.3, 'the table top is where the lap scene puts Jack: ' + t.max.y);
+  const pb = new THREE.Box3().setFromObject(P.makePaddle({ handle: 2, bladeL: 4.4, bladeW: 3.8 })); assert.ok(pb.min.y < -6.2 && pb.min.y > -7.5 && pb.max.x > 1.8, 'a short handle and a blade along -y');
 });
 
 test('the world builds: textures, the island, the deck, the rug, and scenery that keeps clear of what it is told to', () => {

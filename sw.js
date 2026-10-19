@@ -1,6 +1,6 @@
 // Service worker: caches the game on first load so it installs and plays offline. Bump VERSION whenever the files change, so installed copies refresh.
 const APP = '0.6.0';      // the version shown beside the build number (the tools read it from here); the shell's own badge is in game.html
-const VERSION = 'polygon-v060-1';
+const VERSION = 'polygon-v060-2';
 const FILES = [
   'game.html', 'models.html', 'lap.html', 'manifest.webmanifest',
   'js/look.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-paint.js', 'js/poly-face.js', 'js/poly-jack.js', 'js/poly-jack-paint.js', 'js/poly-gerda.js', 'js/poly-gerda-paint.js', 'js/props.js', 'js/world.js', 'js/audio.js', 'js/game.js', 'js/touchui.js', 'js/stage.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/menus.js', 'js/pain.js', 'js/lap-poses.js', 'js/lap.js',

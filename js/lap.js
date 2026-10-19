@@ -1,7 +1,7 @@
 // Polygon — Across the Lap. Gerda is the giver and Jack the subject, built as in js/poly.js; this is the correction scene, driven by the pain model (js/pain.js), which turns each smack
 // (implement, strength, pace, the wait with the hand raised, the clothing over the skin, how tender the skin already is) into Jack's distress, whose bands drive his reaction and face; the
 // rear colours up with the smacks; trousers and drawers come up and down; and the safe word ("Red") stops everything at once.
-// Everything is in model units (1 unit = 1 old skin pixel, a standing figure is 32 tall). Gerda sits on the chair facing +z; Jack lies face down
+// Everything is in model units (a unit is about a hand's width; a standing figure is about 35 tall, see Poly.DIM). Gerda sits on the chair facing +z; Jack lies face down
 // across her lap, hips over her right knee, head hanging off her left side, hands toward the floor.
 (function (root) {
 'use strict';
@@ -11,8 +11,11 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, t) => a + (b - a) * t;
 const srgb = hex => new THREE.Color(hex).convertSRGBToLinear();
 
-// Where everything is. P is Jack's hip joint; PITCH tips him head-down so his upper body leans toward the floor.
-const P = new V3(-6, 10, 6.5), PITCH = -0.05;   // hip joint: his torso's centre (6 up from it) is over the centre of her thighs (x 0, z 3)
+// The skeleton's own dimensions (js/poly.js): everything below that depends on a limb's length takes it from here.
+const D = root.Poly.DIM;
+// Where everything is. P is Jack's hip joint over her lap; PITCH tips him head-down so his upper body leans toward the floor.
+const P = new V3(-D.neck * 0.5, 10, D.thigh + 0.5), PITCH = -0.05;   // hip joint: his torso's centre is over the centre of her thighs (x 0), his hips over her knee (z)
+const LAP_TOP = D.sitHipY + 2.6;      // the top of her lap under the skirt: her hips' height seated, and the thickness of her thighs in their skirts
 const JACK_FULL = 0.95;        // Jack's full size (100%) as a fraction of the model's own scale: he is a little smaller than the model he is built as
 const HOVER = 1.4;            // at rest the hand or paddle hovers this far above the centre of his lower back (the contact pose, lifted)
 const TIMES = { lift: 0.45, hold: 0.15, strike: 0.09, contact: 0.32, back: 0.3 };
@@ -65,7 +68,7 @@ function create(view, opts) {
   const qx = new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2), qy = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), Math.PI / 2);
   const qz = new THREE.Quaternion().setFromAxisAngle(new V3(0, 0, 1), PITCH);
   frame.quaternion.copy(qz).multiply(qy).multiply(qx);
-  const setShins = seated => B.stretchShins(gerda, seated ? (6 + LEGH) / 6 : 1);   // (seated, her shins reach the lowered floor; standing, they are as they are)
+  const setShins = seated => B.stretchShins(gerda, seated ? (D.sitHipY + LEGH) / D.shin : 1);   // (seated, her shins reach the lowered floor; standing, they are as they are)
   setShins(true);
   B.setPose(gerda, 'sit'); Object.assign(gerda.state, B.POSES.sit);
   Object.assign(jack.state, { hipY: 0, lift: 0 }); Object.assign(jack.target, { hipY: 0, lift: 0 });
@@ -73,25 +76,24 @@ function create(view, opts) {
   // tips forward from there part-way toward the angle of his thighs (which fold forward at the hip), bridging his back and his thighs. It
   // takes the look of the trousers, drawers or bare skin.
   const glutesTilt = new THREE.Group();
-  glutesTilt.position.set(0, 0.6, -2.55); glutesTilt.rotation.x = -0.45;
+  glutesTilt.position.set(0, 0.6, -2.5); glutesTilt.rotation.x = -0.45;
   glutesTilt.add(jack.seat); jack.hips.add(glutesTilt);   // (the seat's cheeks are built in the hinge's frame: their backs in its plane, their tops at the hinge)
   // Where the hand lands: points on the back of Jack's hips (his left cheek is the nearer, world −z side), and the middle of his back.
   const mk = (x, y, z, parent) => { const o = new THREE.Object3D(); o.position.set(x, y, z); (parent || jack.torso).add(o); return o; };
-  const rear = { L: mk(2, -2.4, -0.05, glutesTilt), R: mk(-2, -2.4, -0.05, glutesTilt), C: mk(0, -2.4, -0.05, glutesTilt) }, upperBack = mk(0, 10, -2);
+  const rear = { L: mk(1.85, -2.3, -0.05, glutesTilt), R: mk(-1.85, -2.3, -0.05, glutesTilt), C: mk(0, -2.3, -0.05, glutesTilt) }, upperBack = mk(0, D.shoulderY - 0.2, -2.0);
 
-  // The paddle: a short round handle out of the middle of the right-hand face of her forearm block (the face toward his head in the top view, +x in the
-  // forearm's own frame, near its end) and a small blade with rounded corners, lying along that direction with its face down at the contact, its
-  // width along the arm, across one cheek. Tool-local, the paddle runs along -y; the tool group is turned a quarter so that it runs along the arm's +x.
-  const HANDLE = 1.2, BLADE_L = 4.5, BLADE_W = 4;
-  const PALM_M = 6.7;       // her palm: the face of the forearm from two-thirds of the way along it from the elbow (its middle)
-  const PAD_M = 5.8, PAD_SIDE = 1.5 + HANDLE + BLADE_L / 2;   // how far along the arm the paddle springs, and how far its blade's middle stands out to the side
-  const tool = new THREE.Group(); tool.position.set(1.5, -PAD_M, 0); tool.rotation.z = Math.PI / 2; gerda.wrist.add(tool);
+  // The paddle: a round handle held in her fist and a small blade with rounded corners, running on from the fist in line with her forearm; at the contact her wrist is cocked so that
+  // the blade lies along his skin with its face down, across one cheek. Tool-local, the paddle runs along -y from the fist's middle (the tool group is the wrist's child).
+  const HANDLE = 2.0, BLADE_L = 4.4, BLADE_W = 3.8;
+  const PALM_M = D.fore + D.hand * 0.5;       // her palm: its middle, how far along the arm from the elbow
+  const PAD_M = D.fore + 1.0, PAD_ALONG = HANDLE + BLADE_L / 2;   // the fist's middle, how far along the arm from the elbow; and from there to the middle of the blade, along the paddle
+  const tool = new THREE.Group(); tool.position.set(0, -PAD_M, 0); gerda.wrist.add(tool);
   const paddle = B.makePaddle({ handle: HANDLE, bladeL: BLADE_L, bladeW: BLADE_W }); paddle.visible = false; tool.add(paddle);
 
   // The birch: a bundle of pale twigs bound with twine at one end, held in the fist at the end of the forearm and running on along it. Each twig is two
   // segments, so the whole thing can whip: it trails behind on the way up, and bows forward on the skin.
-  const BIRCH_HAND = B.BIRCH.hand, BIRCH_L = B.BIRCH.len, BIRCH_AT = BIRCH_HAND + BIRCH_L * 0.6, BIRCH_FIST = 6;     // the handle in the fist, the twigs beyond it, how far from the hand the twigs meet the skin, and how near the shoulder the fist is brought
-  const birchTool = new THREE.Group(); birchTool.position.set(0, -6, 0); gerda.wrist.add(birchTool);
+  const BIRCH_HAND = B.BIRCH.hand, BIRCH_L = B.BIRCH.len, BIRCH_AT = BIRCH_HAND + BIRCH_L * 0.6, BIRCH_FIST = 7.3;     // the handle in the fist, the twigs beyond it, how far from the hand the twigs meet the skin, and how near the shoulder the fist is brought
+  const birchTool = new THREE.Group(); birchTool.position.set(0, -(D.fore + 0.9), 0); gerda.wrist.add(birchTool);
   const bModel = B.makeBirch(), birch = bModel.root, twigs = bModel.twigs, tips = bModel.tips; birch.visible = false; birchTool.add(birch);
 
   // ── The session ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -171,14 +173,14 @@ function create(view, opts) {
   };
 
   // ── Pose edits (js/lap-poses.js): offsets on top of the procedural pose, per beat, applied bone by bone ───────────────────────────────────
-  const ARM = 10, shoulderLocal = new V3(-5.5, 10, 0), DEG = Math.PI / 180, eul = new THREE.Euler(0, 0, 0, 'YXZ'), qd = new THREE.Quaternion();
+  const DEG = Math.PI / 180, eul = new THREE.Euler(0, 0, 0, 'YXZ'), qd = new THREE.Quaternion();
   // Two sets of poses, made at different sizes of Jack, 100% and 50%, which the poses blend between as he scales (so the contact sites always work).
   // The file is { 100: {gerda, jack}, 50: {gerda, jack} } (a file with no sizes is taken for both).
   const LP = root.LapPoses || {};
   const mkSet = src => JSON.parse(JSON.stringify(src || {}));
   // One set of pose edits for each position (over the knee, bent over the table; the table's are optional in the file as LapPoses.table), at each of the two sizes.
   const SETS = { lap: { 100: mkSet(LP[100] || (LP.gerda ? LP : {})), 50: mkSet(LP[50] || (LP.gerda ? LP : {})) }, table: { 100: mkSet(LP.table && LP.table[100]), 50: mkSet(LP.table && LP.table[50]) } };
-  const BELT_AT = new V3(-5.4, 2, -0.5), PIN_AT = new V3(0, 7.2, -3.3), GRIP_AT = new V3(-1.2, 7.2, -3.7);       // (where his hand goes for his belt, where it lies in the small of his back, and where she holds his wrist then: his hips' and torso's own axes)
+  const BELT_AT = new V3(-3.9, 2.4, -0.3), PIN_AT = new V3(0, 4.6, -2.7), GRIP_AT = new V3(-1.0, 4.8, -3.0);       // (where his hand goes for his belt, where it lies in the small of his back, and where she holds his wrist then: his hips' and torso's own axes)
   const SIZE_MIN = 0.5;                       // below this the poses do not reach (the lower limit of the position)
   // Editable poses: Hand, Paddle and Birch { rest, raised, contactL, contactR } for Gerda (the contact pose is per cheek, and per implement), and Jack { base, react }.
   const GERDA_BEATS = ['rest', 'raised', 'contactL', 'contactR'], WIELD = ['hand', 'paddle', 'birch', 'hand~reach', 'hand~hold'];      // ('hand~reach' and 'hand~hold' are laid over 'hand' while Jack's arm is reaching for his belt or pinned behind him)
@@ -283,7 +285,7 @@ function create(view, opts) {
   // Her swinging arm has an elbow: an upper arm of 4 (shoulder pivot to elbow) and a forearm of 6. Two-bone reach: where the elbow goes for the
   // shoulder at S to bring the point m along the forearm to M (it bends toward the pole when M is nearer than the arm's full length, and the arm
   // straightens, short of M, when it is further).
-  const LU = 4, LF = 6, POLE = new V3(-0.7, 0.5, -0.5).normalize();
+  const LU = D.upper, LF = D.fore + D.hand, POLE = new V3(-0.7, 0.5, -0.5).normalize();
   const POLE_L = new V3(0.7, 0.5, -0.5).normalize();
   function twoBone(S, M, m, pole, lu) {
     const LUx = lu || LU, v = M.clone().sub(S), d = clamp(v.length(), Math.abs(LUx - m) + 0.05, LUx + m - 0.01), ud = v.normalize();
@@ -293,26 +295,27 @@ function create(view, opts) {
     const Mx = S.clone().addScaledVector(ud, d);
     return { u1: E.clone().sub(S).normalize(), f: Mx.clone().sub(E).normalize() };
   }
-  // The blade's side and the arm's pose for a forearm direction f: the blade lies toward the world's +x as far as the forearm's axis allows.
-  const sideOf = f => { const v = new V3(1, 0, 0).addScaledVector(f, -f.x); return v.lengthSq() > 1e-4 ? v.normalize() : new V3(0, 0, 1); };
+  // Which way the blade lies for a forearm direction f and the skin's normal n (into it): the forearm's line, laid along the skin (the wrist cocks to take it there), leaning a little toward his head
+  // where the arm comes straight down on the skin and there is no line to follow.
+  const bladeAlong = (f, n) => { const v = f.clone().addScaledVector(n, -f.dot(n)), pref = new V3(1, 0, 0).addScaledVector(n, -n.x); return v.addScaledVector(pref, 0.25).normalize(); };
 
   // ── Places and stances ──────────────────────────────────────────────────────────────────────────────────────────────────────
   // A place is where the giver is (seated, or standing at the table) and where Jack is. His stances: 'standSeat' (upright between her knees, facing her), 'lap' (face
   // down across her right knee), 'table' (bent forward over the table's edge, chest on the top, feet on the floor), 'standTable' (upright beside the table, facing her).
   // moving between two blends his body (and the hands she lays on him) over a few seconds.
-  const FLOOR = -LEGH, TABLE_H = 14.2, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32;
+  const FLOOR = -LEGH, TABLE_H = 18, CHEST = D.shoulderY + 0.3, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32;
   const PLACES = { seat: { giver: 'sit', jack: 'standSeat' }, lap: { giver: 'sit', jack: 'lap' }, table: { giver: 'stand', jack: 'table' }, after: { giver: 'stand', jack: 'standTable' } };
-  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -10) };
+  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -8.6) };
   const AXX = new V3(1, 0, 0), AXY = new V3(0, 1, 0), AXZ = new V3(0, 0, 1), axq = (ax, a) => new THREE.Quaternion().setFromAxisAngle(ax, a);
   const lapQ = pitch => axq(AXZ, pitch).multiply(axq(AXY, Math.PI / 2)).multiply(axq(AXX, Math.PI / 2)), uprightQ = axq(AXY, Math.PI);
-  const tablePitch = sz => clamp(Math.asin(clamp((TABLE_TOP + 2 * sz - (FLOOR + 12 * sz)) / (11 * sz), -1, 1)), 0, 0.8);
-  const tableEdgeX = sz => -6 * sz + 3.5 * sz;
+  const tablePitch = sz => clamp(Math.asin(clamp((TABLE_TOP + 2 * sz - (FLOOR + D.hipY * sz)) / (CHEST * sz), -1, 1)), 0, 0.8);
+  const tableEdgeX = sz => P.x * sz + 3.5 * sz;
   function stanceFrame(name, sz) {                    // where his hip joint is, and which way his body faces
     switch (name) {
-      case 'standSeat': return { p: new V3(0, FLOOR + 12 * sz, 18.5), q: uprightQ };       // (a little back from her knees, so that her head and his do not meet as she works at his belt)
-      case 'standTable': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: uprightQ };
-      case 'table': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: lapQ(tablePitch(sz)) };
-      default: return { p: new V3(-6 * sz, 8.75 + 2 * sz, P.z), q: lapQ(PITCH) };
+      case 'standSeat': return { p: new V3(0, FLOOR + D.hipY * sz, D.thigh + 12), q: uprightQ };       // (a little back from her knees, so that her head and his do not meet as she works at his belt)
+      case 'standTable': return { p: new V3(P.x * sz, FLOOR + D.hipY * sz, 0), q: uprightQ };
+      case 'table': return { p: new V3(P.x * sz, FLOOR + D.hipY * sz, 0), q: lapQ(tablePitch(sz)) };
+      default: return { p: new V3(P.x * sz, LAP_TOP + 1.9 * sz, P.z), q: lapQ(PITCH) };
     }
   }
   const stanceNow = () => st.blend < 0.5 ? st.from : st.to;
@@ -343,8 +346,8 @@ function create(view, opts) {
   const mixPose = (a, b, e) => { const o = {}; for (const key in a) o[key] = a[key] + (b[key] - a[key]) * e; return o; };
   const easeIO = x => x * x * (3 - 2 * x);
   // Where she lays her hands while he is being brought to her: his belt as he stands, his shoulders once he is up again.
-  const beltL = mk(2.6, 1.2, 3.2, jack.hips), beltR = mk(-2.6, 1.2, 3.2, jack.hips), shoulderL = mk(5.2, 10, 1.5, jack.torso), shoulderR = mk(-5.2, 10, 1.5, jack.torso);
-  const LEAN_SIT_HANDS = 0.5;
+  const beltL = mk(2.3, 1.8, 2.9, jack.hips), beltR = mk(-2.3, 1.8, 2.9, jack.hips), shoulderL = mk(D.shoulderX + 0.3, D.shoulderY + 0.3, 1.2, jack.torso), shoulderR = mk(-D.shoulderX - 0.3, D.shoulderY + 0.3, 1.2, jack.torso);
+  const LEAN_SIT_HANDS = 0.5, WAIST = 3;
   // The table (standalone; in the game the room's own table is used): a plank top 22 deep from the edge Jack lies over and 30 wide, on four legs.
   let table = null;
   if (opts.table !== false) {
@@ -364,7 +367,7 @@ function create(view, opts) {
     const impl = IMPL[st.implement], gw = gerdaWeights(), sw = st.swing;
     g.torso.rotation.order = 'YXZ'; g.torso.rotation.set(0, 0, 0); g.neck.rotation.set(0.1, 0, 0); g.elbow.rotation.set(0, 0, 0); g.elbowL.rotation.set(0, 0, 0); g.wrist.rotation.set(0, 0, 0);
     for (const key of ['armL', 'armR']) { const a = g[key]; a.rotation.set(gerda.state.armX, 0, -a.userData.sign * gerda.state.armIn); }
-    paddle.visible = !!impl.paddle && st.armed; birch.visible = !!impl.birch && st.armed; tool.rotation.set(0, 0, Math.PI / 2); birchTool.quaternion.identity();
+    paddle.visible = !!impl.paddle && st.armed; birch.visible = !!impl.birch && st.armed; tool.quaternion.identity(); birchTool.quaternion.identity();
     g.root.updateMatrixWorld(true);
     applyEdits('gerda', ['torso', 'neck', 'armL', 'armR', 'elbowL', 'elbowR', 'wristR', 'thighL', 'thighR', 'kneeL', 'kneeR'], gw);
     if (impl.paddle) applyEdits('gerda', ['paddle'], gw);
@@ -391,7 +394,7 @@ function create(view, opts) {
     return ik;
   }
   const armTo = (g, tR) => armToSide(g, 'armR', tR);
-  gerda.after = function (g) {
+  const gerdaPose = function (g) {
     for (const l of [g.legL, g.legR]) { l.thigh.rotation.y = 0; l.knee.rotation.y = 0; l.knee.rotation.z = 0; }      // (see jack.after: no stray turns about the wrong axis)
     g.neck.rotation.z = 0;
     if (isFree()) { freePose(g); return; }
@@ -422,6 +425,13 @@ function create(view, opts) {
     g.torso.rotation.order = 'YXZ'; g.torso.rotation.set(standing ? LEAN_STAND : LEAN, st.yaw, 0); g.neck.rotation.x = standing ? 0.3 : 0.55 + 0.4 * LEAN; g.neck.rotation.y = -st.yaw * 0.9;
     applyEdits('gerda', ['torso', 'neck', 'thighL', 'thighR', 'kneeL', 'kneeR'], gw);
     g.root.updateMatrixWorld(true);
+    // Standing, with nothing authored for her torso, she bends at the waist as far as the reach asks (a smaller Jack is further down), and her head follows.
+    if (standing && !editFor('gerda', 'torso', gw)) {
+      const room = impl.paddle ? 0.9 * (LU + PAD_M) + 0.8 * PAD_ALONG : 0.93 * (LU + (impl.birch ? LF : PALM_M));
+      let lean = LEAN_STAND;
+      for (; lean < 0.85; lean += 0.05) { g.torso.rotation.x = lean; g.torso.updateMatrixWorld(true); if (g.armR.getWorldPosition(tmpA).distanceTo(T) <= room) break; }
+      g.torso.rotation.x = lean; g.neck.rotation.x = 0.3 - 0.5 * (lean - LEAN_STAND); g.root.updateMatrixWorld(true);
+    }
     // Left hand rests on Jack's back.
     const ahL = clamp(st.armHold || 0, 0, 1); jack.root.updateMatrixWorld(true);
     const tL = world(upperBack).lerp(jack.torso.localToWorld(GRIP_AT.clone()), ahL);       // (between his shoulder blades; or, when his arm is pinned, holding his wrist behind his back)
@@ -434,8 +444,8 @@ function create(view, opts) {
     // The elbow's place about the line from shoulder to hand: of those that keep her arm clear of her own head, the one that lays her forearm flattest on his skin when n is given (the palm lands,
     // rather than the end of a fist), and the nearest to the usual one, and clear of him.
     g.root.updateMatrixWorld(true);
-    const headAt = g.neck.localToWorld(new V3(0, 4, 0.5)), segD = (a, b, c) => { const ab = b.clone().sub(a), t = clamp(c.clone().sub(a).dot(ab) / ab.lengthSq(), 0, 1); return a.clone().addScaledVector(ab, t).distanceTo(c); };
-    const flat = (S, M, m, n) => { const ud = M.clone().sub(S).normalize(); let best = null; for (let a = -180; a <= 180; a += 10) { const ik = twoBone(S, M, m, POLE.clone().applyAxisAngle(ud, a * DEG)), E = S.clone().addScaledVector(ik.u1, LU), clear = Math.min(segD(S, E, headAt), segD(E, M, headAt)), cost = (n ? Math.abs(ik.f.dot(n)) : 0) + 0.25 * Math.abs(a) / 180 + (E.y < M.y + 1 ? 2 : 0) + Math.max(0, 7.5 - clear) * 0.8; if (!best || cost < best.cost) best = { cost, ik }; } return best.ik; };
+    const headAt = g.neck.localToWorld(new V3(0, 3.2, 0.4)), segD = (a, b, c) => { const ab = b.clone().sub(a), t = clamp(c.clone().sub(a).dot(ab) / ab.lengthSq(), 0, 1); return a.clone().addScaledVector(ab, t).distanceTo(c); };
+    const flat = (S, M, m, n) => { const ud = M.clone().sub(S).normalize(); let best = null; for (let a = -180; a <= 180; a += 10) { const ik = twoBone(S, M, m, POLE.clone().applyAxisAngle(ud, a * DEG)), E = S.clone().addScaledVector(ik.u1, LU), clear = Math.min(segD(S, E, headAt), segD(E, M, headAt)), cost = (n ? Math.abs(ik.f.dot(n)) : 0) + 0.25 * Math.abs(a) / 180 + (E.y < M.y + 1 ? 2 : 0) + Math.max(0, 6.4 - clear) * 0.8; if (!best || cost < best.cost) best = { cost, ik: Object.assign(ik, { a }) }; } return best.ik; };
     // The birch: the fist is brought to a point above the skin, near the shoulder (about BIRCH_FIST from it), so that the twigs, running on from the fist along u, lie on the
     // skin with their middle (BIRCH_AT from the fist) on T. The forearm and the birch then differ by the bend of the wrist.
     let birchU = new V3(0, -1, 0);
@@ -447,17 +457,14 @@ function create(view, opts) {
       const H = T.clone().addScaledVector(u, -BIRCH_AT); if (root.__lapDebug) root.__lapDebug.birch = { sh: sh.toArray().map(x => +x.toFixed(1)), T: T.toArray().map(x => +x.toFixed(1)), H: H.toArray().map(x => +x.toFixed(1)), u: u.toArray().map(x => +x.toFixed(2)), Ld: +Ld.toFixed(1), cosT: +cosT.toFixed(2) };
       return { u, H };
     };
-    const solve = (Mt, withSide) => {        // pose params for the forearm's point m to reach Mt (the paddle: its blade's middle then lands on T)
+    const padDir = bladeAlong(T.clone().sub(sh).normalize(), nInW);       // (the paddle's line at the contact)
+    const solve = (Mt) => {        // pose params for the forearm's point m to reach Mt (the paddle: its blade's middle then lands on T)
       if (impl.birch) { const r = birchContact(); birchU = r.u; return flat(sh, r.H, reachM, null); }
       if (hand) return flat(sh, Mt, reachM, nInW);
-      let M = Mt, ik;
-      for (let it = 0; it < (withSide ? 4 : 1); it++) {
-        ik = flat(sh, M, reachM, null);
-        if (withSide) M = Mt.clone().addScaledVector(sideOf(ik.f), -PAD_SIDE);
-      }
-      return ik;
+      // The blade lies along the skin, in the line the arm comes in on (from her shoulder to where it lands), so that the paddle comes down the way the arm does; the fist is the paddle's length back from there.
+      return flat(sh, Mt.clone().addScaledVector(padDir, -PAD_ALONG), reachM, null);
     };
-    const contact = solve(T, impl.paddle);
+    const contact = solve(T);
     const ud = T.clone().sub(sh).normalize();
     const outward = sh.clone().sub(headAt); outward.y = 0; outward.normalize();       // (raised up and a little out from her head, not past her face)
     const raisedAt = sh.clone().addScaledVector(ud.clone().multiplyScalar(0.35).addScaledVector(UP, 0.95).addScaledVector(outward, 0.6).normalize(), reachM * 0.95);
@@ -476,18 +483,24 @@ function create(view, opts) {
       const fw = new V3(0, -1, 0).applyQuaternion(g.wrist.getWorldQuaternion(tmpQ2));
       if (fw.dot(ik.f) < 0.999) { g.elbow.rotation.x = psi; g.root.updateMatrixWorld(true); }
       let omega = 0;
-      if (impl.paddle || hand) {              // twist the forearm about its axis so the blade lies toward his head; or so that the palm (a flat face of the forearm) faces where it should (his skin, at contact; the floor, raised)
-        const xw = new V3(1, 0, 0).applyQuaternion(g.wrist.getWorldQuaternion(tmpQ2)), want = hand ? palmTo : sideOf(ik.f);
-        omega = -Math.atan2(xw.clone().cross(want).dot(ik.f), xw.dot(want));
-        if (hand) { if (omega > Math.PI / 2) omega -= Math.PI; else if (omega < -Math.PI / 2) omega += Math.PI; }       // (either flat face will do: the nearer)
+      if (hand) {              // twist the forearm about its axis so that the palm (a flat face of the forearm) faces where it should (his skin, at contact; the floor, raised)
+        const xw = new V3(1, 0, 0).applyQuaternion(g.wrist.getWorldQuaternion(tmpQ2));
+        omega = -Math.atan2(xw.clone().cross(palmTo).dot(ik.f), xw.dot(palmTo));
+        if (omega > Math.PI / 2) omega -= Math.PI; else if (omega < -Math.PI / 2) omega += Math.PI;       // (either flat face will do: the nearer)
       }
       return { q: g.armR.quaternion.clone(), psi: g.elbow.rotation.x, omega };
     };
     const pc = armPose(contact, nInW);
+    let padQ = null;       // the paddle's turn at the wrist for the landed pose: its length along the skin, its face on it (raised, it simply runs on from the forearm)
+    if (impl.paddle) {
+      g.root.updateMatrixWorld(true);
+      const wq = g.wrist.getWorldQuaternion(new THREE.Quaternion()), yt = padDir.clone().negate(), zt = nInW.clone().addScaledVector(padDir, -nInW.dot(padDir)).normalize();
+      padQ = wq.clone().invert().multiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new V3().crossVectors(yt, zt), yt, zt)));
+    }
     // The raised pose is the one, of the elbow's places about the line from shoulder to hand, that takes her arm from the landed pose with the least turn of the upper arm about itself (so that nothing spins as it
     // comes down), clear of her head, and nearest the usual one.
     const turnBetween = (qa, qb) => { const aa = new V3(0, -1, 0).applyQuaternion(qa), ab = new V3(0, -1, 0).applyQuaternion(qb), sw = new THREE.Quaternion().setFromUnitVectors(aa, ab), r = qb.clone().multiply(sw.multiply(qa).invert()); let t = 2 * Math.atan2(r.x * ab.x + r.y * ab.y + r.z * ab.z, r.w); if (t > Math.PI) t -= 2 * Math.PI; if (t < -Math.PI) t += 2 * Math.PI; return Math.abs(t); };
-    let raisedIK = null; { const udr = raisedAt.clone().sub(sh).normalize(); let bestC = 1e9; for (let a = -180; a <= 180; a += 15) { const ik = twoBone(sh, raisedAt, reachM, POLE.clone().applyAxisAngle(udr, a * DEG)), E = sh.clone().addScaledVector(ik.u1, LU), clear = Math.min(segD(sh, E, headAt), segD(E, raisedAt, headAt)), q = armPose(ik, DOWN).q, cost = 1.5 * turnBetween(pc.q, q) / Math.PI + 0.25 * Math.abs(a) / 180 + Math.max(0, 7.5 - clear) * 0.8; if (cost < bestC) { bestC = cost; raisedIK = ik; } } }
+    let raisedIK = null; { const udr = raisedAt.clone().sub(sh).normalize(); let bestC = 1e9; for (let a = -180; a <= 180; a += 15) { const ik = twoBone(sh, raisedAt, reachM, POLE.clone().applyAxisAngle(udr, a * DEG)), E = sh.clone().addScaledVector(ik.u1, LU), clear = Math.min(segD(sh, E, headAt), segD(E, raisedAt, headAt)), q = armPose(ik, DOWN).q, cost = 1.5 * turnBetween(pc.q, q) / Math.PI + 0.25 * Math.abs(a) / 180 + Math.max(0, 6.4 - clear) * 0.8; if (cost < bestC) { bestC = cost; raisedIK = ik; } } }
     const pr = armPose(raisedIK, DOWN);
     if (root.__lapDebug) root.__lapDebug.turn = Math.round(turnBetween(pc.q, pr.q) * 180 / Math.PI);
     g.armR.quaternion.copy(pr.q).slerp(pc.q, tau);
@@ -498,17 +511,14 @@ function create(view, opts) {
     const gwArm = gw;      // (at rest the right arm is aimed over the centre of his lower back; its rest offsets are laid on that)
     applyEdits('gerda', ['armR', 'elbowR', 'wristR'], gwArm);
     if (impl.birch) { g.root.updateMatrixWorld(true); aim(birchTool, birchUraised.clone().lerp(birchU, tau).normalize()); applyEdits('gerda', ['birch'], gwArm); }
-    if (impl.paddle) {
-      // Roll the blade about its own length so that, at contact, its face lies on the angle of his glutes (the block's back face, tipped between his
-      // back and his thighs); raised, it is left as the forearm carries it.
-      tool.rotation.set(0, 0, Math.PI / 2); g.root.updateMatrixWorld(true);
-      tool.getWorldQuaternion(tmpQ2);
-      const lw = new V3(1, 0, 0).applyQuaternion(tmpQ2), zw = new V3(0, 0, 1).applyQuaternion(tmpQ2);
-      const nIn = new V3(0, 0, 1).applyQuaternion(glutesTilt.getWorldQuaternion(tmpQ)).addScaledVector(lw, 0);   // into the block, from its back face
-      const want = nIn.addScaledVector(lw, -nIn.dot(lw));
-      if (want.lengthSq() > 1e-4) { want.normalize(); tool.rotation.set(Math.atan2(zw.clone().cross(want).dot(lw), zw.dot(want)) * tau, 0, Math.PI / 2); }
-    }
+    if (impl.paddle) tool.quaternion.identity().slerp(padQ, tau);
     if (impl.paddle) applyEdits('gerda', ['paddle'], gwArm);
+  };
+  gerda.after = function (g) {
+    g.torso.position.x = g.torso.position.z = 0;
+    gerdaPose(g);
+    if (st.giverStance === 'stand') { const th = g.torso.rotation.x; g.torso.position.y += WAIST * (1 - Math.cos(th)); g.torso.position.z -= WAIST * Math.sin(th); }       // (standing, she bends at the waist, not at the hip joint: the torso swings about a point WAIST up, so the waist piece of her skirt stays under it)
+    g.grip(paddle.visible || birch.visible);       // (her right hand is a fist while it holds the paddle or the birch)
   };
   const STANDING = { standSeat: 1, standTable: 1 };
   jack.after = function (j) {
@@ -578,7 +588,7 @@ function create(view, opts) {
     overview: { pos: [-44, 56, 50], at: [-3, 10, 4] },       // three-quarter, from in front of Gerda's right
     behind: { pos: [-38, 58, 12], at: [-8, 10, 4] },         // down on Jack's rear, from his feet
     shoulder: { pos: [-22, 46, -22], at: [-6, 8, 6] },       // over Gerda's right shoulder: the giver's own view
-    face: { pos: [22, 6, 30], at: [6, 5, 3] },               // Jack's face, from the floor side
+    face: { pos: [26, 3, 33], at: [8.3, 8, 9.3] },          // Jack's face, from the floor side
     tableSide: { pos: [-62, 24, 34], at: [-3, 8, -4] },      // the table scene from Jack's right: him bent over it, her at his side
     tableBehind: { pos: [-52, 26, -22], at: [-6, 6, -3] },    // from behind them both, over her shoulder
     tableAbove: { pos: [-40, 46, 14], at: [-7, 9, -2] },        // from above and behind Jack's feet, a little to his right
@@ -600,29 +610,29 @@ function create(view, opts) {
   const BLADE_END = -(HANDLE + BLADE_L);
   const HANDLE_DEFS = {
     gerda: [
-      H('neck', 'aim', 'Head', hpt(gerda.neck, 0, 4, 0)),
-      H('torso', 'aim', 'Chest (turns and leans the torso)', hpt(gerda.torso, 0, 12, 0)),
+      H('neck', 'aim', 'Head', hpt(gerda.neck, 0, 3.2, 0)),
+      H('torso', 'aim', 'Chest (turns and leans the torso)', hpt(gerda.torso, 0, D.neck, 0)),
       H('torso', 'move', 'Torso (moves it)', hpt(gerda.torso, 0, 2, 0)),
       H('armL', 'aim', 'Left elbow (swings the left upper arm)', gerda.elbowL),
-      H('elbowL', 'aim', 'Left hand (bends the left elbow)', hpt(gerda.wristL, 0, -6, 0)),
+      H('elbowL', 'aim', 'Left hand (bends the left elbow)', hpt(gerda.wristL, 0, -(D.fore + D.hand * 0.7), 0)),
       H('armR', 'aim', 'Right elbow (swings the right upper arm)', gerda.elbow),
-      H('elbowR', 'aim', 'Right hand (bends the elbow)', hpt(gerda.wrist, 0, -6, 0)),
-      H('wristR', 'twist', 'Right wrist twist (turns the forearm, hand and paddle about the forearm)', hpt(gerda.wrist, 2.4, -3, 0), new V3(0, 1, 0)),
+      H('elbowR', 'aim', 'Right hand (bends the elbow)', hpt(gerda.wrist, 0, -(D.fore + D.hand * 0.7), 0)),
+      H('wristR', 'twist', 'Right wrist twist (turns the forearm, hand and paddle about the forearm)', hpt(gerda.wrist, 1.6, -2.6, 0), new V3(0, 1, 0)),
       H('paddle', 'aim', 'Paddle tip (swings the paddle)', hpt(tool, 0, BLADE_END, 0)),
       H('paddle', 'twist', 'Paddle roll (rolls the blade about its length)', hpt(tool, BLADE_W / 2, -(HANDLE + BLADE_L / 2), 0), new V3(0, 1, 0)),
       H('birch', 'aim', 'Birch tip (swings the birch)', hpt(birchTool, 0, -(BIRCH_HAND + BIRCH_L), 0)),
-      H('thighL', 'aim', 'Left knee', hpt(gerda.legL.thigh, 0, -6, 0)), H('kneeL', 'aim', 'Left foot', hpt(gerda.legL.knee, 0, -6, 0)),
-      H('thighR', 'aim', 'Right knee', hpt(gerda.legR.thigh, 0, -6, 0)), H('kneeR', 'aim', 'Right foot', hpt(gerda.legR.knee, 0, -6, 0)),
+      H('thighL', 'aim', 'Left knee', hpt(gerda.legL.thigh, 0, -D.thigh, 0)), H('kneeL', 'aim', 'Left foot', hpt(gerda.legL.knee, 0, -D.shin, 0)),
+      H('thighR', 'aim', 'Right knee', hpt(gerda.legR.thigh, 0, -D.thigh, 0)), H('kneeR', 'aim', 'Right foot', hpt(gerda.legR.knee, 0, -D.shin, 0)),
     ],
     jack: [
       H('frame', 'move', 'Jack (moves his whole body on her lap)', hpt(frame, 0, 0, 0)),
-      H('torso', 'aim', 'Shoulders (turns his torso)', hpt(jack.torso, 0, 12, 0)),
-      H('neck', 'aim', 'Head', hpt(jack.neck, 0, 4, 0)),
-      H('armL', 'aim', 'Left elbow (swings the upper arm)', jack.elbowL), H('elbowL', 'aim', 'Left hand (bends the elbow)', hpt(jack.elbowL, 0, -6, 0)),
-      H('armR', 'aim', 'Right elbow (swings the upper arm)', jack.elbow), H('elbowR', 'aim', 'Right hand (bends the elbow)', hpt(jack.elbow, 0, -6, 0)),
-      H('glutes', 'aim', 'Glutes block (tilts it)', hpt(glutesTilt, 0, -5.2, 2.25)),
-      H('thighL', 'aim', 'Left knee', hpt(jack.legL.thigh, 0, -6, 0)), H('kneeL', 'aim', 'Left foot', hpt(jack.legL.knee, 0, -6, 0)),
-      H('thighR', 'aim', 'Right knee', hpt(jack.legR.thigh, 0, -6, 0)), H('kneeR', 'aim', 'Right foot', hpt(jack.legR.knee, 0, -6, 0)),
+      H('torso', 'aim', 'Shoulders (turns his torso)', hpt(jack.torso, 0, D.neck, 0)),
+      H('neck', 'aim', 'Head', hpt(jack.neck, 0, 3.2, 0)),
+      H('armL', 'aim', 'Left elbow (swings the upper arm)', jack.elbowL), H('elbowL', 'aim', 'Left hand (bends the elbow)', hpt(jack.elbowL, 0, -(D.fore + D.hand * 0.7), 0)),
+      H('armR', 'aim', 'Right elbow (swings the upper arm)', jack.elbow), H('elbowR', 'aim', 'Right hand (bends the elbow)', hpt(jack.elbow, 0, -(D.fore + D.hand * 0.7), 0)),
+      H('glutes', 'aim', 'Glutes block (tilts it)', hpt(glutesTilt, 0, -4.5, 2.1)),
+      H('thighL', 'aim', 'Left knee', hpt(jack.legL.thigh, 0, -D.thigh, 0)), H('kneeL', 'aim', 'Left foot', hpt(jack.legL.knee, 0, -D.shin, 0)),
+      H('thighR', 'aim', 'Right knee', hpt(jack.legR.thigh, 0, -D.thigh, 0)), H('kneeR', 'aim', 'Right foot', hpt(jack.legR.knee, 0, -D.shin, 0)),
     ],
   };
   // What each bone is, in plain words (shown in the editor).

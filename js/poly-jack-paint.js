@@ -75,7 +75,7 @@ J.paintFace = function (sh, ex, blushOn) {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // the angle round the head, 0 at the front, for a column of the shell (it runs 240 degrees from Jack's left, round the back, to his right)
 const shellAngle = u => { let t = Math.PI / 3 + (4 * Math.PI / 3) * u; if (t > Math.PI) t -= 2 * Math.PI; return Math.abs(t); };
-J.paintStatic = function (S, outfit) {
+J.paintStatic = function (S, outfit, rows) {
   const { c: C_, T } = palFor(outfit), tunic = !!T, HEAD = P.HEAD_JACK;
   S.ear.draw((c, W, H) => { c.fillStyle = grad(c, 0, 0, W, 0, [[0, C.skinSh], [0.5, C.skin], [1, C.skinSh]]); c.fillRect(0, 0, W, H); blob(c, W / 2, H * 0.55, W * 0.34, H * 0.34, C.skinDk, 0.55, 0.3); blob(c, W / 2, H * 0.16, W * 0.3, H * 0.1, C.skinHi, 0.7, 0.2); });
   // trim swatches (4 px each): belt, buckle, buckle shine, pouch, sole, boot brass, dark, skin, skin light, skin shade
@@ -126,7 +126,7 @@ J.paintStatic = function (S, outfit) {
     for (const e of [[6, 1], [W - 6, -1]]) { line(c, e[0], 0, e[0], H, fine ? 7 : 8, pipe, 'butt'); line(c, e[0] + e[1] * 11, 0, e[0] + e[1] * 11, H, 2, rgba(C_.stitch, fine ? 0.5 : 0.8)); stitches(c, e[0] + e[1] * 18, 4, e[0] + e[1] * 18, H - 4, 8, 5, 2, rgba(fine ? C_.goldHi : '#e9dca0', 0.8)); }
     line(c, 0, H - 4, W, H - 4, 8, pipe, 'butt'); line(c, 0, 5, W, 5, 7, pipe, 'butt');
     line(c, W / 2, 6, W / 2, H - 6, 3, rgba(C_.vestDk, 0.9)); stitches(c, W / 2 + 9, 8, W / 2 + 9, H - 8, 7, 5, 2, rgba('#e9dca0', 0.6)); stitches(c, W / 2 - 9, 8, W / 2 - 9, H - 8, 7, 5, 2, rgba('#e9dca0', 0.6));
-    for (const x of [30]) for (let i = 0; i < 5; i++) { const y = 18 + i * 28; ellipse(c, x, y, 5.5, 5.5, C_.brass); ellipse(c, x - 1.5, y - 1.5, 2.4, 2.4, C_.goldHi); c.strokeStyle = shade(C_.goldDk, 1); c.lineWidth = 1.5; ellipse(c, x, y, 5.5, 5.5); c.stroke(); }
+    for (const x of [30]) for (let i = 0; i < 5; i++) { const y = 14 + i * 24; ellipse(c, x, y, 5.5, 5.5, C_.brass); ellipse(c, x - 1.5, y - 1.5, 2.4, 2.4, C_.goldHi); c.strokeStyle = shade(C_.goldDk, 1); c.lineWidth = 1.5; ellipse(c, x, y, 5.5, 5.5); c.stroke(); }
     if (fine) for (let i = 0; i < 9; i++) { const x = 120 + i * 24; c.strokeStyle = rgba(C_.gold, 0.75); c.lineWidth = 2; c.beginPath(); c.moveTo(x, H - 20); c.quadraticCurveTo(x + 6, H - 34, x + 12, H - 20); c.stroke(); }
   });
   // arms: the sleeve (or the tunic's), rolled at the elbow; the forearm with its leather wrist-wrap
@@ -176,11 +176,11 @@ J.paintStatic = function (S, outfit) {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // which garment lies at a distance d down the thigh from the hip
 const garmentAt = (down, dd, d) => !down ? 'trousers' : d < 2 ? (dd ? 'skin' : 'drawers') : d < 4 ? 'drawers' : 'trousers';
-J.paintLegs = function (S, outfit, down, dd, marks) {
+J.paintLegs = function (S, outfit, down, dd, marks, rows) {
   const { c: C_, T } = palFor(outfit), tunic = !!T;
   S.thigh.draw((c, W, H) => {
     // rows of the sheet run from the hip (0) down the thigh (6.7 units over H px)
-    const unit = y => y / H * 6.7 - 0.4;
+    const unit = py => -rows.thighY(py);                                          // (how far below the hip joint a row of the sheet is)
     for (let y = 0; y < H; y += 2) {
       const d = Math.max(0, unit(y)); let what = garmentAt(down, dd, d); if (tunic && !down && d > T.len) what = 'skin';
       const base = what === 'skin' ? C.skin : what === 'drawers' ? C.drawers : C_.trousers, hi = what === 'skin' ? C.skinHi : what === 'drawers' ? '#ffffff' : C_.trousersHi;
@@ -207,11 +207,11 @@ J.paintLegs = function (S, outfit, down, dd, marks) {
     }
   });
 };
-J.paintPelvis = function (Pv, outfit, down, dd, marks) {
+J.paintPelvis = function (Pv, outfit, down, dd, marks, rows) {
   const { c: C_, T } = palFor(outfit), tunic = !!T, what = !down ? 'trousers' : !dd ? 'drawers' : 'skin';
   const col = { trousers: C_.trousers, drawers: C.drawers, skin: C.seat }[what], tail = tunic ? T.base : C_.linen, tailDk = tunic ? T.dk : C_.linenSh;
   Pv.draw((c, W, H) => {
-    const yb = H * 0.34, front = down ? tail : C_.trousers;
+    const yb = rows.pelvis(1.0) * H, front = down ? tail : C_.trousers;       // (the shirt-tail ends a unit above the hips)
     c.fillStyle = grad(c, 0, yb, 0, H, [[0, shade(front, 1.0)], [1, shade(front, 0.85)]]); c.fillRect(0, yb, W, H - yb);
     if (!down) { c.fillStyle = grad(c, 0, yb, W, yb, [[0, shade(front, 0.85)], [0.5, C_.trousersHi], [1, shade(front, 0.85)]]); c.fillRect(0, yb, W, H - yb); line(c, W / 2, yb, W / 2, H, 3, rgba(C_.trousersDk, 0.8), 'butt'); }
     c.fillStyle = grad(c, 0, yb, 0, H, [[0, shade(col, 1.0)], [1, shade(col, 0.88)]]);

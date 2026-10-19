@@ -95,9 +95,26 @@ class Atlas {
     if (this._y + h > this.h || w > this.w) throw new Error('atlas full at sheet ' + name);
     const s = new Sheet(this, name, this._x, this._y, w, h); this._x += w + PAD; this._row = Math.max(this._row, h); this.sheets[name] = s; return s;
   }
-  // Pack a list of [name, w, h] tallest first (shelf packing wastes least that way); returns the sheets by name.
+  // Pack a list of [name, w, h] with MaxRects (best short side fit): the largest first, each into the free rectangle it leaves least room beside, a PAD gap kept round every sheet. Returns the sheets by name.
   pack(defs) {
-    const out = {}; defs.slice().sort((a, b) => b[2] - a[2] || b[1] - a[1]).forEach(d => { out[d[0]] = this.sheet(d[0], d[1], d[2]); }); return out;
+    const out = {}, free = [{ x: 0, y: 0, w: this.w + PAD, h: this.h + PAD }];
+    const items = defs.slice().sort((a, b) => Math.max(b[1], b[2]) - Math.max(a[1], a[2]) || b[1] * b[2] - a[1] * a[2]);
+    for (const [name, w, h] of items) {
+      const W = w + PAD, H = h + PAD; let best = null;
+      for (const f of free) if (W <= f.w && H <= f.h) { const sc = Math.min(f.w - W, f.h - H), sl = Math.max(f.w - W, f.h - H); if (!best || sc < best.sc || (sc === best.sc && sl < best.sl)) best = { f, sc, sl }; }
+      if (!best) throw new Error('atlas full at sheet ' + name);
+      const px = best.f.x, py = best.f.y; out[name] = this.sheets[name] = new Sheet(this, name, px, py, w, h);
+      const placed = { x: px, y: py, w: W, h: H }, next = [];
+      for (const f of free) {                                                           // (cut every free rectangle the new sheet overlaps into what is left of it)
+        if (placed.x >= f.x + f.w || placed.x + placed.w <= f.x || placed.y >= f.y + f.h || placed.y + placed.h <= f.y) { next.push(f); continue; }
+        if (placed.x > f.x) next.push({ x: f.x, y: f.y, w: placed.x - f.x, h: f.h });
+        if (placed.x + placed.w < f.x + f.w) next.push({ x: placed.x + placed.w, y: f.y, w: f.x + f.w - placed.x - placed.w, h: f.h });
+        if (placed.y > f.y) next.push({ x: f.x, y: f.y, w: f.w, h: placed.y - f.y });
+        if (placed.y + placed.h < f.y + f.h) next.push({ x: f.x, y: placed.y + placed.h, w: f.w, h: f.y + f.h - placed.y - placed.h });
+      }
+      free.length = 0; for (const f of next) if (!next.some(g => g !== f && f.x >= g.x && f.y >= g.y && f.x + f.w <= g.x + g.w && f.y + f.h <= g.y + g.h)) free.push(f);      // (and drop those that lie inside another)
+    }
+    return out;
   }
   texture() {
     if (this.tex) return this.tex;

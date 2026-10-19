@@ -27,13 +27,13 @@ npm test             # file checks, the pain model, and a headless build of the 
 
 ## The models
 
-Jack and Gerda are each about ten thousand triangles: a stack of **rigid, smooth segments on a joint skeleton** (a head, a neck, a torso, a pelvis, two arms of upper arm and forearm and hand, two legs of thigh and shin and foot), with a ball or a dome over every joint so a bend never opens a gap. A shape is lofted from hand-placed rings with a *squareness* exponent for its cross-section (an ellipse for an arm, a rounded square for a jaw or a chest), smoothed with a Catmull-Rom curve between the rings, and textured from one **1024×1024 atlas** per figure painted in code with vector shapes: gradients, curves, tapered strokes, soft blobs, stitches and a little grain.
+Jack and Gerda are each about eleven thousand triangles: a stack of **rigid, smooth segments on a joint skeleton** (a head, a neck, a torso, a pelvis, two arms of upper arm and forearm and hand, two legs of thigh and shin and foot), with a ball or a dome over every joint so a bend never opens a gap. A shape is lofted from hand-placed rings with a *squareness* exponent for its cross-section (an ellipse for an arm, a rounded square for a jaw or a chest), smoothed with a Catmull-Rom curve between the rings, and textured from one **1024×1024 atlas** per figure painted in code with vector shapes: gradients, curves, tapered strokes, soft blobs, stitches and a little grain.
 
 * **Faces are repainted**: the head is a grid whose front 120° is a flat face plate mapped straight on from the front. An expression redraws that plate with `Poly.Face` (js/poly-face.js): eyes with a lash line and catchlights, brows, a mouth with teeth and tongue, tears, blush, laugh lines.
 * **Hair** is a cap that follows the skull with swept locks laid over it (`Poly.lock`), a bun and a pin for Gerda.
 * **Jack** has eight named faces (`grin`, `wince`, `gritted`, `crying`, `squint`, `cheeky`, `shy`, `smile`) and four outfits: `Outdoor` (linen shirt under an open green jerkin that stands off it, belt and pouch, patched trousers, boots), `Day` (a soft green tunic over snug shorts, barefoot), `Soft` (a cornflower tunic with a pocket, barefoot), `Fine` (the outdoor clothes dressed up). Trousers and drawers come up and down, and the bare skin takes **marks** cheek by cheek.
 * **Gerda** has three faces (`calm`, `stern`, `laughing`) and two outfits: `Work` (plum bodice laced over a blouse, a cream apron tied at the waist, an ankle-length skirt) and `Fine` (a lavender embroidered gown with gold bracelets and anklets hung with moonstones). Her skirt is a closed, flared solid round each leg under a rolled-hem waist piece, so it drapes over her knees when she sits.
-* Both are proportioned as grown people, a head about a seventh of their height.
+* Both are proportioned as grown people, in the manner of the adults in *Mika and the Witch's Mountain*: about six heads tall, **long legs (half the height)**, a small head on a visible neck, shoulders that sit low and narrow with the arm hanging naturally from them, slim limbs, and small hands and feet (the fingertips hang to mid-thigh).
 
 ```js
 const jack = Poly.makeJack(), gerda = Poly.makeGerda('Work');
@@ -44,11 +44,11 @@ Poly.setPose(jack, 'sit');                         // 'stand' | 'sit'; Poly.step
 
 ### The skeleton
 
-The rig is the one the correction scene was tuned on, joint for joint, so all of its poses still apply: a standing figure is 32 units tall; the hips sit 12 up; the torso is 12 tall with the neck at its top; the shoulders are 10 up it and 5.5 out; an arm is an upper arm of 4 and a forearm of 6 (the hand's end is 10 below the shoulder); a leg is a thigh of 6 and a shin of 6. A rig is `{ root, hips, torso, pelvis, neck, armL/armR (shoulder pivots), elbowL/wristL, elbow/wrist (the right arm), legL/legR: { thigh, knee, shin, foot, sign, ring }, state, target, apply, after, paint(state), stretchShins(k) }`. A scene adds its own motion by setting `rig.after = r => { … }`, which runs at the end of every `apply`.
+Every length is in one place, `Poly.DIM` (js/poly.js), and the figures, the correction scene and the sandbox all read it: a standing figure is about 35 units tall (a unit is about a hand's width); the hips sit 17 up and 1.9 either side of the middle; a leg is a thigh of 8.5 and a shin of 8.5 to the sole; the neck's pivot is 11.1 above the hips, with the shoulder joints 8.2 up and 3.4 out (3 below it); an arm is an upper arm of 5.6, a forearm of 4 and a hand of 3.1. Change a length there and the models follow (the geometry is built from rings placed by hand, so a large change needs the rings looked at, but nothing in the scenes is hard-coded). A rig is `{ root, hips, torso, pelvis, neck, armL/armR (shoulder pivots), elbowL/wristL, elbow/wrist (the right arm), legL/legR: { thigh, knee, shin, foot, sign, ring }, state, target, apply, after, paint(state), stretchShins(k) }`. A scene adds its own motion by setting `rig.after = r => { … }`, which runs at the end of every `apply`. Gerda also has `fists` and `grip(on)`, which closes her right hand on an implement.
 
 ### The props and the world
 
-`js/props.js` has the chair (a plank seat whose top is at y = 4, where Gerda's thighs rest), the table, the paddle and the birch: rounded boxes and turned legs under painted wood. `js/world.js` has the tiling textures (meadow, flagstones, soil and rock, leaves, bark, a woven rug), the round **island** the sandbox stands on, the wooden **deck** and rug of the correction scene, and trees, bushes and rocks to dress an island (`World.scatter`; the camera hides whatever it is inside).
+`js/props.js` has the chair (a plank seat whose top is at y = 4, where Gerda's thighs rest; its legs reach down to y = −4.6), the table, the paddle and the birch: rounded boxes and turned legs under painted wood. `js/world.js` has the tiling textures (meadow, flagstones, soil and rock, leaves, bark, a woven rug), the round **island** the sandbox stands on, the wooden **deck** and rug of the correction scene, and trees, bushes and rocks to dress an island (`World.scatter`; the camera hides whatever it is inside).
 
 ### Files
 
@@ -56,7 +56,7 @@ The rig is the one the correction scene was tuned on, joint for joint, so all of
 |---|---|
 | `js/look.js` | The picture: toon material, ink, sky and light, post |
 | `js/poly-geo.js` | The toolkit: `Atlas` and `Sheet` (a packed texture and its vector painter), `Grid`, `loft` and `sweep` (rings and spines into smooth tubes with a UV for every vertex), `softBox`, `merge` |
-| `js/poly.js` | The skeleton, the poses, and the parts both figures share (head, hair, hands, feet) |
+| `js/poly.js` | The skeleton and its dimensions (`Poly.DIM`), the poses, and the parts both figures share (head, hair, hands and fist, feet) |
 | `js/poly-paint.js`, `js/poly-face.js` | The painter's kit (blobs, tapered strokes, curves, stitches, grain) and the face kit (eyes, brows, mouths) |
 | `js/poly-jack.js`, `js/poly-jack-paint.js` | Jack: measurements and geometry; the painters for his face, clothes and marks |
 | `js/poly-gerda.js`, `js/poly-gerda-paint.js` | Gerda: the same |
@@ -68,7 +68,7 @@ To add a figure or an outfit, copy the pattern in `poly-jack.js`: list the sheet
 
 A meadow on a floating island, with trees, bushes and rocks about its edge, a few things to jump on (crates, a run of steps, a wall, a pillar), a chair, Gerda, and Jack to walk about as. It exists to show the engine working and has no level in it.
 
-**WASD** (or the stick) moves relative to the camera, Jack turning into the way he goes; **Shift** runs, **C** creeps, **Space** jumps, **E** sits, stands and talks, **drag** turns the camera, **V** or the wheel cycles three zoom levels, **[** and **]** shrink and grow Jack between 50% and 100% (his pace, his jump and the camera's distance follow his size). On a touch screen there is a joystick and buttons for run, creep, jump, act and zoom. The walk is procedural on the rig (swinging thighs, knees that bend through the swing, arms and elbows, a bob, a crouch for creeping, a tucked pose in the air).
+**WASD** (or the stick) moves relative to the camera, Jack turning into the way he goes; **Shift** runs, **C** creeps, **Space** jumps, **E** sits, stands and talks, **drag** turns the camera, **V** or the wheel cycles three zoom levels, **[** and **]** shrink and grow Jack between 50% and 100% (his pace, his jump and the camera's distance follow his size). On a touch screen there is a joystick and buttons for run, creep, jump, act and zoom. The walk is procedural on the rig: the legs are posed from their own geometry (a thigh swung forward, a knee bent as the leg comes through) and the hips ride at the height that puts the lowest sole on the ground, so each foot stays planted while the body passes over it; the phase runs at the pace of the ground, so nothing slides. Arms swing against the legs with bent elbows, a crouch lowers the hips for creeping, and there is a tucked pose in the air. Sitting swings the camera round to the chair's front.
 
 ## The cutscene toolkit (`js/game.js`)
 
@@ -90,7 +90,7 @@ Gerda gives, Jack receives, across her lap on a plain chair, or bent over a tabl
 
 * **Smack / Run / Stop / End**, with **Pace** and **Strength** steps (Space smacks); a smack is a lift, a hold with the arm raised (that wait builds dread), the strike and a short hold on the skin (which keeps stinging).
 * The **pain model** (`js/pain.js`) turns each smack into Jack's **distress**; its bands (composed, flinching, struggling, close to the edge, past it, too harsh) drive his kicks and wriggling and his face. At 1.5 it is too harsh and nothing more is struck.
-* **Implements**: the hand, landed with the end of Gerda's forearm on the middle of one cheek at a time; a small rounded paddle held out from her forearm; the birch (for the table). Each has its own weight and sting.
+* **Implements**: the hand, landed with the end of Gerda's forearm on the middle of one cheek at a time; a small rounded paddle held in her fist in line with her forearm, the wrist cocked to lay its face flat on the skin; the birch (for the table). Each has its own weight and sting.
 * **Clothes**: trousers up or down, and drawers up or down. Cloth over the rear cushions the sting only.
 * **Marks**: the bare rear colours up with the smacks, cheek by cheek, and tender skin hurts more.
 * **Red**: the safe word stops everything at once.
@@ -99,11 +99,11 @@ Gerda gives, Jack receives, across her lap on a plain chair, or bent over a tabl
 * **Wardrobe** for both; **Gerda's face** (calm, stern, laughing).
 * **Arm poses** over the knee: reaching back for his belt, and pinned behind him with Gerda holding his wrist.
 
-Her swinging arm is solved geometrically (an elbow, a wrist twist): her torso never twists or leans for a strike, the hand's end lands on the cheek being struck, the paddle's blade lies across it and is rolled to the angle of his seat. Offsets tuned by hand sit on top of the procedural pose.
+Her swinging arm is solved geometrically (an elbow, a wrist twist): the middle of her palm lands on the cheek being struck, the paddle's blade lies across it with its face on the angle of his seat, and the birch lies across both. Seated, she leans forward a little to reach; standing at the table, she bends at the waist as far as the reach asks (so a smaller Jack is further down, and she stoops to him). Offsets tuned by hand sit on top of the procedural pose.
 
 ### Pose editor
 
-`lap.html` ▸ **Edit poses** holds the scene at a beat and lets you lay offsets on any bone, live, with sliders or by dragging the joint handles in the view (yellow spheres swing a bone, cyan cubes move it, pink diamonds twist it). **Nothing is stored in the browser**: press **Report**, then paste it into `js/lap-poses.js`. The skeleton the poses were tuned on is unchanged, so the existing ones apply to the models; the contact sites (the two cheeks of Jack's seat) are built where the old block's were.
+`lap.html` ▸ **Edit poses** holds the scene at a beat and lets you lay offsets on any bone, live, with sliders or by dragging the joint handles in the view (yellow spheres swing a bone, cyan cubes move it, pink diamonds twist it). **Nothing is stored in the browser**: press **Report**, then paste it into `js/lap-poses.js`. The arms (and the paddle) are always solved against the contact sites, so they follow the figures' dimensions on their own; `js/lap-poses.js` holds only the offsets laid on top of that, and the birch's authored table poses.
 
 ## Installing as a mobile web app
 

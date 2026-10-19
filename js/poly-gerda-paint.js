@@ -15,6 +15,10 @@ const C = {
 // the gown
 const F = { lav: '#b2a4e2', lavDk: '#8a7bc8', lavHi: '#d2c8f4', lavDp: '#6a5aac', cream: '#f8efd9', creamDk: '#ddd0ae', gold: '#f0c352', goldDk: '#b98a2c', goldHi: '#fff0a0', moon: '#e6f0ff', moonSh: '#a9bde6' };
 
+// Heights on the torso were chosen for a first body; this maps them to where they fall on the present one (the hips, the waist, under the bust, the bust, the collarbone, the neck's base).
+const OLDH = [2.0, 3.9, 7.0, 8.5, 10.0, 12.45], NEWH = [2.0, 4.0, 5.9, 7.3, 9.0, 10.75];
+const mapH = y => { if (y <= OLDH[0]) return NEWH[0] + (y - OLDH[0]); for (let i = 0; i < OLDH.length - 1; i++) if (y <= OLDH[i + 1]) return NEWH[i] + (NEWH[i + 1] - NEWH[i]) * (y - OLDH[i]) / (OLDH[i + 1] - OLDH[i]); return NEWH[NEWH.length - 1] + (y - OLDH[OLDH.length - 1]); };
+
 // Soft pleats: n strips of shadow with a light edge down a skirt's sheet, so flat colour reads as cloth that hangs in folds.
 function pleats(c, x, y, w, h, seed, n, dk, hi, a) {
   const r = rnd(seed);
@@ -132,7 +136,7 @@ G.paintStatic = function (S, outfit, rows) {
 
   // ── torso (448 x 224; the front is the middle column): a bodice laced over a blouse, or the gown ──
   S.torso.draw((c, W, H) => {
-    const mx = W / 2, ry = y => rows.torso(y) * H;
+    const mx = W / 2, ry = y => rows.torso(mapH(y)) * H;
     if (!fine) {
       c.fillStyle = grad(c, 0, 0, 0, H, [[0, C.blouse], [1, C.blouseSh]]); c.fillRect(0, 0, W, H);
       // the blouse's scoop neck, with a lace edge and a gathering string
@@ -253,8 +257,8 @@ G.paintStatic = function (S, outfit, rows) {
     pleats(c, 0, 0, W, H, 83, 20, dk, hi, 0.5); strands(c, 0, 0, W, H, 85, 70, dk, 0.25);
     if (!fine) {
       const x0 = W * 0.40, x1 = W * 0.552;
-      c.fillStyle = grad(c, x0, 0, x1, 0, [[0, C.apronSh], [0.18, C.apron], [1, C.apron]]); c.fillRect(x0, 0, x1 - x0, H * 0.8); c.fillStyle = rgba(C.apronDk, 0.5); c.fillRect(x0, 0, 2, H * 0.8);
-      c.fillStyle = C.gold; c.fillRect(x0, H * 0.8, x1 - x0, 5); line(c, x0, H * 0.8 + 5, x1, H * 0.8 + 5, 1.6, C.goldDk, 'butt');       // (the apron's hem lies at the knee, where the shin's solid begins)
+      c.fillStyle = grad(c, x0, 0, x1, 0, [[0, C.apronSh], [0.18, C.apron], [1, C.apron]]); c.fillRect(x0, 0, x1 - x0, H * 0.86); c.fillStyle = rgba(C.apronDk, 0.5); c.fillRect(x0, 0, 2, H * 0.86);
+      c.fillStyle = C.gold; c.fillRect(x0, H * 0.86, x1 - x0, 5); line(c, x0, H * 0.86 + 5, x1, H * 0.86 + 5, 1.6, C.goldDk, 'butt');       // (the apron's hem lies at the knee, where the shin's solid begins)
     } else {
       const r = rnd(7); for (let i = 0; i < 10; i++) { const x = r() * W, y = 14 + r() * 100; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; ellipse(c, x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3.2, 1.8, F.cream, a); c.fill(); } ellipse(c, x, y, 2.2, 2.2, F.gold); c.fill(); }
     }

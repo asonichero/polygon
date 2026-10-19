@@ -12,7 +12,7 @@ const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI)
 
 const FULL = 0.95, SIZE_MIN = 0.5;                                  // Jack's full size is 95% of the model's own scale, as in the correction scene
 const WALK = 26, CREEP = 7.5, RUN = 50, GRAV = 420, JUMP_V = 112, STEP = 3;     // units per second (times his scale); a jump rises about 15 units
-const ZOOMS = [{ name: 'Close', d: 44 }, { name: 'Medium', d: 78 }, { name: 'Far', d: 130 }];
+const ZOOMS = [{ name: 'Close', d: 48 }, { name: 'Medium', d: 84 }, { name: 'Far', d: 136 }];
 const EDGE = 258, INF = 1e9;                                          // (the island's walkable radius)
 const START = new V3(0, 0, 70), GERDA_AT = new V3(-34, 0, 18), CHAIR_AT = new V3(66, 0, 8);
 
@@ -61,11 +61,20 @@ function build(G) {
   return world;
 }
 
-// The walk: legs and arms swing from jack.walk = { phase, speed, air, sneak, sit, kick, t, look }, as the rig's own `after` hook.
+// The walk: legs and arms swing from jack.walk = { phase, speed, air, sneak, sit, kick, t, look }, as the rig's own `after` hook. The legs are posed from their own geometry: the hips ride at the
+// height that puts the lowest sole on the ground, so each foot stays planted while the body passes over it, and the phase runs at the pace of the ground (speed is in the figure's own units a second).
 function walker(rig) {
-  const w = rig.walk = { phase: 0, speed: 0, air: false, sneak: false, sit: false, kick: 0, t: 0, look: 0 };
+  const D = P.DIM, w = rig.walk = { phase: 0, speed: 0, air: false, sneak: false, sit: false, kick: 0, t: 0, look: 0 };
+  const SOLE = [[-1.6, -D.shin], [3.1, -D.shin]];                   // the heel and the toes (z, y) in the knee's frame
+  const amp = v => 0.45 * clamp(v / 26, 0.35, 1) * clamp(v / 4, 0, 1) + 0.2 * clamp((v - 30) / 24, 0, 1);              // how far a leg swings each way
+  w.advance = dt => { const v = w.speed; if (v > 0.05) w.phase += dt * 2 * Math.PI * v / (4 * D.hipY * Math.sin(Math.max(0.02, amp(v)))); };
+  // The lowest point of a sole below the hip, for a thigh swung forward by f and a knee bent by k (the turns are about x: the knee's, then the thigh's).
+  const lowest = (f, k) => {
+    let low = 0, ck = Math.cos(k), sk = Math.sin(k), cf = Math.cos(f), sf = Math.sin(f);
+    for (const [z, y] of SOLE) { const y1 = y * ck - z * sk - D.thigh, z1 = y * sk + z * ck; low = Math.min(low, y1 * cf + z1 * sf); }
+    return low;
+  };
   rig.after = r => {
-    const sp = clamp(w.speed / 24, 0, 1.4), ph = w.phase, sw = Math.sin(ph) * 0.8 * Math.min(1, sp);
     if (w.sit) {                                                    // seated: legs hang from the seat, a restless Jack swings his shins
       r.legL.knee.rotation.x = r.state.shinX + w.kick * 0.7 * Math.sin(w.t * 7); r.legR.knee.rotation.x = r.state.shinX + w.kick * 0.7 * Math.sin(w.t * 7 + Math.PI);
       r.neck.rotation.y = w.look; return;
@@ -73,13 +82,18 @@ function walker(rig) {
     if (w.air) {                                                    // in the air: arms up, one knee tucked
       r.armL.rotation.x = r.armR.rotation.x = -2.3; r.armL.rotation.z = -0.25; r.armR.rotation.z = 0.25; r.legL.thigh.rotation.x = -0.7; r.legL.knee.rotation.x = 0.9; r.legR.thigh.rotation.x = 0.35; r.legR.knee.rotation.x = 0.4; r.torso.rotation.x = 0.05; return;
     }
-    if (w.sneak) { r.hips.position.y = 10.4; r.torso.rotation.x = 0.28; r.neck.rotation.x = -0.2 + r.state.headX; }
-    const bend = w.sneak ? 0.5 : 0;
-    r.legL.thigh.rotation.x = sw - bend * 0.6; r.legR.thigh.rotation.x = -sw - bend * 0.6;
-    r.legL.knee.rotation.x = bend + (sp > 0.05 ? 0.12 + Math.max(0, -Math.cos(ph)) * 0.95 * Math.min(1, sp) * (Math.sin(ph) < 0 ? 1 : 0.8) : 0); r.legR.knee.rotation.x = bend + (sp > 0.05 ? 0.12 + Math.max(0, Math.cos(ph)) * 0.95 * Math.min(1, sp) * (Math.sin(ph) > 0 ? 1 : 0.8) : 0);
-    r.armL.rotation.x = -sw * 0.9; r.armR.rotation.x = sw * 0.9; if (r.elbowL) { r.elbowL.rotation.x = -0.2 - 0.5 * Math.max(0, -Math.sin(ph)) * sp; r.elbow.rotation.x = -0.2 - 0.5 * Math.max(0, Math.sin(ph)) * sp; }
-    if (!w.sneak) { r.hips.position.y = r.state.hipY + Math.abs(Math.sin(ph)) * 0.6 * Math.min(1, sp); r.torso.rotation.x = 0.1 * clamp((w.speed - 30) / 30, 0, 1); }
-    r.torso.rotation.y = -sw * 0.18; r.neck.rotation.y = w.look - r.torso.rotation.y;
+    const v = w.speed, k = clamp(v / 26, 0, 1), run = clamp((v - 30) / 24, 0, 1), A = amp(v), ph = w.phase;
+    const bias = w.sneak ? 0.6 : 0, base = w.sneak ? 0.6 : 0, lift = (0.55 + 0.55 * k + 0.5 * run) * (w.sneak ? 0.55 : 1);       // (a creep stands low, knees bent; a knee bends as its leg comes through)
+    const leg = (l, p) => {
+      const f = bias + A * Math.sin(p), q = ((p + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI), kn = base + (q < Math.PI ? lift * Math.sin(q) * Math.min(1, 8 * A) : 0);
+      l.thigh.rotation.x = -f; l.knee.rotation.x = kn; return lowest(f, kn);
+    };
+    const lo = Math.min(leg(r.legL, ph), leg(r.legR, ph + Math.PI));
+    r.hips.position.y = -lo;
+    r.armL.rotation.x = 1.15 * A * Math.sin(ph); r.armR.rotation.x = -1.15 * A * Math.sin(ph);
+    if (r.elbowL) { r.elbowL.rotation.x = -0.25 - 0.55 * Math.max(0, -Math.sin(ph)) * k - 0.9 * run; r.elbow.rotation.x = -0.25 - 0.55 * Math.max(0, Math.sin(ph)) * k - 0.9 * run; }
+    r.torso.rotation.x = (w.sneak ? 0.3 : 0.04) + 0.12 * run; if (w.sneak) r.neck.rotation.x = -0.2 + r.state.headX;
+    r.torso.rotation.y = -0.32 * A * Math.sin(ph); r.neck.rotation.y = w.look - r.torso.rotation.y;
   };
 }
 
@@ -91,8 +105,8 @@ function title(G, world) {
   world.player = null; world.mode = 'title'; world.chair.visible = true;
   jack.root.visible = true; jack.root.scale.setScalar(FULL); jack.root.position.set(-13, 0, 0); jack.root.rotation.y = 0.35; gerda.root.position.set(14, 0, 0); gerda.root.rotation.y = -0.35;
   P.setPose(jack, 'stand'); P.setPose(gerda, 'stand'); jack.walk.sit = false; jack.walk.speed = 0; jack.walk.air = false; jack.walk.sneak = false; world.ga.talk = 0;
-  const c = new V3(0, 17, 0);
-  G.drone = t => { const a = 0.55 + t * 0.07, sx = Math.cos(a) * -22, sz = Math.sin(a) * 22; return { pos: new V3(Math.sin(a) * 78 + sx, 24 + Math.sin(t * 0.13) * 3, Math.cos(a) * 78 + sz), look: new V3(c.x + sx, c.y, c.z + sz), fov: 40 }; };   // (the pair sit right of centre, clear of the menu)
+  const c = new V3(0, 18.5, 0);
+  G.drone = t => { const a = 0.55 + t * 0.07, sx = Math.cos(a) * -22, sz = Math.sin(a) * 22; return { pos: new V3(Math.sin(a) * 96 + sx, 27 + Math.sin(t * 0.13) * 3, Math.cos(a) * 96 + sz), look: new V3(c.x + sx, c.y, c.z + sz), fov: 40 }; };   // (the pair sit right of centre, clear of the menu)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -108,7 +122,7 @@ function play(G, world, hud) {
   gerda.root.position.copy(GERDA_AT); gerda.root.rotation.y = Math.PI / 2;
   world.mode = 'play'; G.mode = 'play'; document.body.classList.add('playing');
   const camPos = new V3(), look = new V3(), spec = { pos: camPos, look, fov: 48 };
-  const camGoal = () => { const d = ZOOMS[S.zoom].d * S.size, p = S.pitch, at = look.set(S.pos.x, S.y + 16 * sc() / FULL * 0.95, S.pos.z); return new V3(at.x + Math.sin(S.yaw) * Math.cos(p) * d, Math.max(3, at.y + Math.sin(p) * d), at.z + Math.cos(S.yaw) * Math.cos(p) * d); };
+  const camGoal = () => { const d = ZOOMS[S.zoom].d * S.size, p = S.pitch, at = look.set(S.pos.x, S.y + 17.4 * sc(), S.pos.z); return new V3(at.x + Math.sin(S.yaw) * Math.cos(p) * d, Math.max(3, at.y + Math.sin(p) * d), at.z + Math.cos(S.yaw) * Math.cos(p) * d); };
   camPos.copy(camGoal()); G.drone = () => spec; G.cut(spec); G.drone = () => spec;
 
   // ── Input ──
@@ -150,12 +164,13 @@ function play(G, world, hud) {
     if (near(new V3(chair.position.x, 0, chair.position.z), 22)) { sitDown(); return; }
     toast('Nothing to do here.');
   }
-  function sitDown() { S.sit = true; w.sit = true; P.setPose(jack, 'sit'); S.heading = chair.rotation.y; S.speed = 0; }
+  function sitDown() { S.sit = true; w.sit = true; P.setPose(jack, 'sit'); S.heading = chair.rotation.y; S.speed = 0; S.swing = 1.4; }       // (the camera comes round to the chair's front, to see him sit)
   function standUp() { S.sit = false; w.sit = false; P.setPose(jack, 'stand'); const th = chair.rotation.y; S.pos.set(chair.position.x + Math.sin(th) * (P.CHAIR.front + 8 * sc()), 0, chair.position.z + Math.cos(th) * (P.CHAIR.front + 8 * sc())); S.y = 0; S.vy = 0; S.grounded = true; }
 
   const tick = dt => {
     if (G.mode !== 'play') return;
     const s = sc(); jack.root.scale.setScalar(lerp(jack.root.scale.x, s, Math.min(1, dt * 6)));
+    if (S.swing > 0) { S.swing -= dt; S.yaw = turn(S.yaw, chair.rotation.y + 0.8, Math.min(1, dt * 3)); }
     if (S.sit) {
       const sp = seatPos(); jack.root.position.copy(sp); jack.root.rotation.y = chair.rotation.y; w.t += dt; w.kick = 0.5 * (1 - (S.size - SIZE_MIN) / 0.5) + 0.3; w.speed = 0; w.look = 0; S.pos.set(sp.x, 0, sp.z); S.y = sp.y;
     } else {
@@ -185,7 +200,7 @@ function play(G, world, hud) {
       if (!S.grounded) { S.vy -= GRAV * dt; S.y += S.vy * dt; if (S.y <= g && S.vy <= 0) { S.y = g; S.vy = 0; S.grounded = true; } }
       else S.y = lerp(S.y, g, Math.min(1, dt * 30));                                   // (stepping up or down onto what is under him)
       jack.root.position.set(S.pos.x, S.y, S.pos.z); jack.root.rotation.y = S.heading;
-      w.air = !S.grounded; w.sneak = S.sneak; w.speed = S.speed / Math.max(0.3, s / FULL); w.phase += dt * (S.speed > 0.5 ? 3.2 + S.speed / (s * 9) : 0); w.t += dt;
+      w.air = !S.grounded; w.sneak = S.sneak; w.speed = lerp(w.speed, S.speed / s, Math.min(1, dt * 12)); w.advance(dt); w.t += dt;
       const dxg = GERDA_AT.x - S.pos.x, dzg = GERDA_AT.z - S.pos.z; w.look = lerp(w.look, Math.hypot(dxg, dzg) < 60 ? clamp(turn(S.heading, Math.atan2(dxg, dzg), 1), -0.8, 0.8) : 0, Math.min(1, dt * 5));
     }
     // the camera, kept at a distance in Jack's own sizes
@@ -213,14 +228,14 @@ async function talk(G, world, S, ui, hud) {
   if (hud) { hud.hint.style.display = 'none'; hud.toast.style.opacity = 0; }
   const mine = G.mode, drone = G.drone; G.drone = null; G.mode = 'cutscene'; document.body.classList.add('cutscene'); G.skipping = false;
   const at = (o, y) => new V3(o.x, y, o.z), j = jack.root.position, g = gerda.root.position;
-  const mid = new V3((j.x + g.x) / 2, 17, (j.z + g.z) / 2), perp = new V3(g.z - j.z, 0, j.x - g.x).normalize();
-  G.cut({ pos: mid.clone().addScaledVector(perp, 56).setY(24), look: mid.clone(), fov: 40 });
+  const mid = new V3((j.x + g.x) / 2, 19, (j.z + g.z) / 2), perp = new V3(g.z - j.z, 0, j.x - g.x).normalize();
+  G.cut({ pos: mid.clone().addScaledVector(perp, 60).setY(26), look: mid.clone(), fov: 40 });
   const face = Math.atan2(g.x - j.x, g.z - j.z); S.heading = face; jack.root.rotation.y = face; gerda.root.rotation.y = face + Math.PI;
   ga.talk = 1;
   await G.say('gerda', 'This is the stage. A meadow, a few boxes to jump on, a chair. Nothing else, on purpose.');
-  await G.shot({ pos: g.clone().add(new V3(Math.sin(face + 2.4) * 30, 23, Math.cos(face + 2.4) * 30)), look: at(g, 22), fov: 36 }, 1.6);
+  await G.shot({ pos: g.clone().add(new V3(Math.sin(face + 2.4) * 32, 26, Math.cos(face + 2.4) * 32)), look: at(g, 25), fov: 36 }, 1.6);
   await G.say('gerda', 'The engine is what is left: a camera, a voice, a walk, and a picture painted entirely in code. No models, no texture files.');
-  await G.shot({ pos: j.clone().add(new V3(Math.sin(face - 2.4) * 28, 22, Math.cos(face - 2.4) * 28)), look: at(j, 20), fov: 36 }, 1.6);
+  await G.shot({ pos: j.clone().add(new V3(Math.sin(face - 2.4) * 30, 25, Math.cos(face - 2.4) * 30)), look: at(j, 23), fov: 36 }, 1.6);
   ga.talk = 0;
   const pick = await G.choose('jack', ['Can I be smaller?', 'Is that all?']);
   ga.talk = 1;
@@ -232,5 +247,5 @@ async function talk(G, world, S, ui, hud) {
   await G.fade(false, 0.5);
 }
 
-root.Stage = { build, title, play, stop, talk, FULL, SIZE_MIN, ZOOMS };
+root.Stage = { build, title, play, stop, talk, walker, FULL, SIZE_MIN, ZOOMS };
 })(typeof window !== 'undefined' ? window : globalThis);

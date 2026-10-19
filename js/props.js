@@ -1,5 +1,5 @@
 // Polygon — the props the figures use: the chair Gerda sits on, the table, the paddle and the birch. Built like the figures (js/poly.js): smooth rounded solids in the toon material, inked,
-// with painted wood. Model units: 1 unit = 1 old skin pixel, a standing figure is 32 tall.
+// with painted wood. Model units: 1 unit = 1 old skin pixel, a standing figure is 35 tall.
 (function (root) {
 'use strict';
 const THREE = root.THREE, P = root.Poly = root.Poly || {}, K = P.Paint, { loft, ball, merge, place } = P, R = P.R, clamp = P.clamp;
@@ -33,7 +33,7 @@ const tubeUV = (g, N, scale, rad) => (i, k, x, y) => [y / scale, k / N * (2 * Ma
 // ---------------------------------------------------------------------------------------------------------------------------
 // The chair: a plank seat (top at y = 4, where Gerda's thighs rest), a straight back and legs that run down to y = -CHAIR.legH, so the floor stands there. It faces +z.
 // ---------------------------------------------------------------------------------------------------------------------------
-const CHAIR = { legH: 6, seatTop: 4, front: 5.7, back: -6.1, halfW: 7 };
+const CHAIR = { legH: 4.6, seatTop: 4, front: 5.7, back: -6.1, halfW: 7 };
 function makeChair() {
   const g = new THREE.Group(), wood = woodMat('#c88f58', { seed: 7, boards: 0 }), dark = woodMat('#93603a', { seed: 11, knot: false }), top = woodMat('#a97245', { seed: 5, knot: false });
   const part = (geo, x, y, z, m, scale) => { P.boxUV(geo, scale || 9); const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };

@@ -43,6 +43,10 @@
   <div class="sub">Outfit</div><div class="btns" id="wardR"></div>
   <div class="sub" style="margin-top:6px">Expression</div><div class="btns" id="exprR"></div>
   <div class="btns" style="margin-top:6px"><button id="staff">Staff: off</button></div>
+  <div class="sub" style="margin-top:6px">Clothes (as in the correction scene)</div>
+  <div class="btns"><button id="rTrousers">Trousers: up</button><button id="rDrawers">Drawers: up</button><button id="rHitch">Tunic: down</button></div>
+  <div class="row" style="margin-top:6px"><label><span>Marks</span><span id="rMarksOut">0%</span></label><input id="rMarks" type="range" min="0" max="100" value="0"></div>
+  <div class="row"><label><span>Size (Mantle small form is 50%)</span><span id="rSizeOut">100%</span></label><input id="rSize" type="range" min="40" max="110" value="100"></div>
 
   <h3>Jack's size</h3>
   <div class="row"><label><span>Scale</span><span id="sizeOut">100%</span></label><input id="size" type="range" min="25" max="100" value="100"></div>
@@ -118,6 +122,13 @@
   tr.onclick = function () { jackSt.trousers = jackSt.trousers === 'up' ? 'down' : 'up'; tr.textContent = 'Trousers: ' + jackSt.trousers; repaintJ(); };
   dr.onclick = function () { jackSt.drawers = jackSt.drawers === 'up' ? 'down' : 'up'; dr.textContent = 'Drawers: ' + jackSt.drawers; repaintJ(); };
   var marks = document.getElementById('marks'); marks.oninput = function () { var m = marks.value / 100; jackSt.marks = { L: m, R: m }; document.getElementById('marksOut').textContent = marks.value + '%'; repaintJ(); };
+  var redSt = { trousers: 'up', drawers: 'up', hitched: false, marks: { L: 0, R: 0 } };
+  var rT = document.getElementById('rTrousers'), rD = document.getElementById('rDrawers'), rH = document.getElementById('rHitch');
+  rT.onclick = function () { redSt.trousers = redSt.trousers === 'up' ? 'down' : 'up'; rT.textContent = 'Trousers: ' + redSt.trousers; red.paint(redSt); };
+  rD.onclick = function () { redSt.drawers = redSt.drawers === 'up' ? 'down' : 'up'; rD.textContent = 'Drawers: ' + redSt.drawers; red.paint(redSt); };
+  rH.onclick = function () { redSt.hitched = !redSt.hitched; rH.textContent = 'Tunic: ' + (redSt.hitched ? 'hitched' : 'down'); red.paint(redSt); };
+  var rM = document.getElementById('rMarks'); rM.oninput = function () { var m = rM.value / 100; redSt.marks = { L: m, R: m }; document.getElementById('rMarksOut').textContent = rM.value + '%'; red.paint(redSt); };
+  var rS = document.getElementById('rSize'); rS.oninput = function () { red.root.scale.setScalar(rS.value / 100); document.getElementById('rSizeOut').textContent = rS.value + '%'; };
   var size = document.getElementById('size'), sout = document.getElementById('sizeOut');
   size.oninput = function () { jack.root.scale.setScalar(size.value / 100 * 0.95); sout.textContent = size.value + '%'; };
   var spin = document.getElementById('spin'); spin.onclick = function () { controls.autoRotate = !controls.autoRotate; spin.classList.toggle('on', controls.autoRotate); };

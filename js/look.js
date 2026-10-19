@@ -55,9 +55,14 @@ void main() {
   #else
     vVC = vec3( 1.0 );
   #endif
-  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  #ifdef USE_INSTANCING
+    mat4 mv = modelViewMatrix * instanceMatrix; vec3 nrm = normalize( mat3( mv ) * outlineNormal );
+  #else
+    mat4 mv = modelViewMatrix; vec3 nrm = normalize( normalMatrix * outlineNormal );
+  #endif
+  vec4 mvPosition = mv * vec4( position, 1.0 );
   vec4 clip = projectionMatrix * mvPosition;
-  vec3 n = normalize( normalMatrix * outlineNormal );
+  vec3 n = nrm;
   vec4 cn = projectionMatrix * vec4( n, 0.0 );
   vec2 dir = cn.xy * uView; float l = length( dir ); dir = l > 1e-5 ? dir / l : vec2( 0.0 );
   clip.xy += dir / uView * 2.0 * uThick * clip.w;
@@ -109,11 +114,15 @@ Look.decorate = function (obj) {
   for (const m of todo) {
     const mat = Array.isArray(m.material) ? m.material[0] : m.material;
     outlineNormals(m.geometry);
-    const h = new THREE.Mesh(m.geometry, hullMaterial(mat.map || null, mat.map ? null : mat.color || new THREE.Color(1, 1, 1)));
+    const hm = hullMaterial(mat.map || null, mat.map ? null : mat.color || new THREE.Color(1, 1, 1));
+    const h = m.isInstancedMesh ? new THREE.InstancedMesh(m.geometry, hm, m.instanceMatrix.count) : new THREE.Mesh(m.geometry, hm);       // (an instanced mesh's ink shares its matrices; keep its count in step with Look.syncInk)
+    if (m.isInstancedMesh) { h.instanceMatrix = m.instanceMatrix; h.count = m.count; m.frustumCulled = false; }
     h.userData.hull = true; h.castShadow = false; h.receiveShadow = false; h.renderOrder = m.renderOrder; h.frustumCulled = false; m.userData.inked = true; m.add(h);
   }
   return obj;
 };
+// An instanced mesh's ink draws as many instances as the mesh does: call this after changing its count.
+Look.syncInk = function (m) { for (const h of m.children) if (h.userData.hull && h.isInstancedMesh) h.count = m.count; };
 // Everything the shadow pass and the lights should know about a model.
 Look.shade = function (obj, cast, receive) { obj.traverse(m => { if (m.isMesh && !m.userData.hull) { m.castShadow = cast !== false; m.receiveShadow = receive !== false; } }); return obj; };
 

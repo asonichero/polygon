@@ -33,25 +33,23 @@ function create(view, opts) {
   // Standalone (lap.html) it makes its own renderer, camera, orbit controls, floor and lights. Embedded (opts.external = { scene, camera, renderer }) it only adds its
   // cast to the game's scene, inside one group (api.stage) that the game places and scales, and the game renders.
   const ext = opts.external || null;
-  let renderer, scene, camera, controls, floor = null;
+  let renderer, scene, camera, controls, floor = null, rug = null;
   if (ext) {
     renderer = ext.renderer; scene = ext.scene; camera = ext.camera;
     controls = { target: new V3(), enabled: true, update() {} };
   } else {
-    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
-    view.appendChild(renderer.domElement); if (root.Retro) root.Retro.attach(renderer);
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140, 300);
+    view.appendChild(renderer.domElement); root.Look.attach(renderer);
+    scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(36, 1, 1, 600);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.minDistance = 12; controls.maxDistance = 160; controls.maxPolarAngle = Math.PI * 0.495;
-    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30283a, 0.62));
-    const sun = new THREE.DirectionalLight(0xfff0d8, 0.62); sun.position.set(40, 80, 60); scene.add(sun);
-    const fc = document.createElement('canvas'); fc.width = fc.height = 32; const fx = fc.getContext('2d');
-    fx.fillStyle = '#3a3f4a'; fx.fillRect(0, 0, 32, 32); fx.fillStyle = '#343944'; fx.fillRect(0, 0, 16, 16); fx.fillRect(16, 16, 16, 16);
-    fx.fillStyle = '#2a2e38'; fx.fillRect(0, 15, 32, 1); fx.fillRect(15, 0, 1, 32);
-    const ft = new THREE.CanvasTexture(fc); ft.magFilter = THREE.NearestFilter; ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(16, 16); ft.encoding = THREE.sRGBEncoding;
-    floor = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), new THREE.MeshLambertMaterial({ map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+    // warm afternoon light over a round wooden deck, a rug under the chair, a bright sky all round
+    const lit = root.Look.rig(scene, { top: 0x5b9be0, mid: 0xf6e2c4, low: 0xf6ead6, fog: 0xf3e2c8, fogNear: 260, fogFar: 900, sun: [-60, 95, 80], sunColor: 0xfff0d0, hemi: [0xfff4e2, 0x9a7a5c, 0.55], key: 0.55, shadow: 78 });
+    lit.fit(new V3(8, 6, 4), 78);
+    floor = root.World.deck({ radius: 84 }); scene.add(floor);
+    rug = root.World.rug(76, 50, 0.08); rug.position.set(8, 0.08, 2); floor.add(rug);
   }
   const stage = new THREE.Group(); scene.add(stage);
   // The chair: a plank seat (top at y = 4, where Gerda's thighs rest) and a straight back.
@@ -88,16 +86,7 @@ function create(view, opts) {
   const PALM_M = 6.7;       // her palm: the face of the forearm from two-thirds of the way along it from the elbow (its middle)
   const PAD_M = 5.8, PAD_SIDE = 1.5 + HANDLE + BLADE_L / 2;   // how far along the arm the paddle springs, and how far its blade's middle stands out to the side
   const tool = new THREE.Group(); tool.position.set(1.5, -PAD_M, 0); tool.rotation.z = Math.PI / 2; gerda.wrist.add(tool);
-  const woodMat = c => new THREE.MeshLambertMaterial({ color: srgb(c) });
-  const paddle = new THREE.Group(); paddle.visible = false; tool.add(paddle);
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, HANDLE + 0.2, 12), woodMat(0x7a4e26)); handle.position.y = -(HANDLE + 0.2) / 2; paddle.add(handle);
-  {
-    const w = BLADE_W, l = BLADE_L, rad = 1.2, x0 = -w / 2, x1 = w / 2, y1 = -HANDLE, y0 = y1 - l, sh = new THREE.Shape();
-    sh.moveTo(x0 + rad, y0); sh.lineTo(x1 - rad, y0); sh.quadraticCurveTo(x1, y0, x1, y0 + rad); sh.lineTo(x1, y1 - rad); sh.quadraticCurveTo(x1, y1, x1 - rad, y1);
-    sh.lineTo(x0 + rad, y1); sh.quadraticCurveTo(x0, y1, x0, y1 - rad); sh.lineTo(x0, y0 + rad); sh.quadraticCurveTo(x0, y0, x0 + rad, y0);
-    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.8, bevelEnabled: true, bevelThickness: 0.15, bevelSize: 0.15, bevelSegments: 2, curveSegments: 8 });
-    g.translate(0, 0, -0.4); paddle.add(new THREE.Mesh(g, woodMat(0x9a6a38)));
-  }
+  const paddle = B.makePaddle({ handle: HANDLE, bladeL: BLADE_L, bladeW: BLADE_W }); paddle.visible = false; tool.add(paddle);
 
   // The birch: a bundle of pale twigs bound with twine at one end, held in the fist at the end of the forearm and running on along it. Each twig is two
   // segments, so the whole thing can whip: it trails behind on the way up, and bows forward on the skin.
@@ -359,9 +348,7 @@ function create(view, opts) {
   // The table (standalone; in the game the room's own table is used): a plank top 22 deep from the edge Jack lies over and 30 wide, on four legs.
   let table = null;
   if (opts.table !== false) {
-    table = new THREE.Group(); stage.add(table); const wood = new THREE.MeshLambertMaterial({ color: srgb(0x8a6c4a) }), legs = new THREE.MeshLambertMaterial({ color: srgb(0x5a4430) });
-    const tb = (w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); table.add(q); };
-    tb(22, 2.4, 30, 11, TABLE_TOP - 1.2, 0, wood); for (const [x, z] of [[2.4, -12.6], [19.6, -12.6], [2.4, 12.6], [19.6, 12.6]]) tb(2.6, TABLE_H - 2.4, 2.6, x, FLOOR + (TABLE_H - 2.4) / 2, z, legs); table.visible = false;
+    table = B.makeTable(FLOOR, TABLE_H); stage.add(table); table.visible = false;
   }
 
   function birchFlex(sw, tau) {                      // the twigs trail on the way up, bow forward on the skin, and settle

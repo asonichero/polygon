@@ -54,8 +54,8 @@ vol.forEach(([id, k]) => { const el = $(id); el.value = Math.round(A.vols[k] * 1
 $('vSpeed').value = Math.round(G.settings.speed * 100); $('vSpeed').oninput = () => { G.settings.speed = $('vSpeed').value / 100; G.saveSettings(); };
 $('cAuto').checked = G.settings.auto; $('cAuto').onchange = () => { G.settings.auto = $('cAuto').checked; G.saveSettings(); };
 $('cSubs').checked = G.settings.subtitles; $('cSubs').onchange = () => { G.settings.subtitles = $('cSubs').checked; G.saveSettings(); };
-$('sLines').value = String(G.settings.lines); $('sLines').onchange = () => G.applyDisplay({ lines: +$('sLines').value });
-$('cDither').checked = !!G.settings.dither; $('cDither').onchange = () => G.applyDisplay({ dither: $('cDither').checked });
-$('cSnap').checked = !!G.settings.snap; $('cSnap').onchange = () => G.applyDisplay({ snap: $('cSnap').checked });
-$('cSmooth').checked = !!G.settings.smooth; $('cSmooth').onchange = () => G.applyDisplay({ smooth: $('cSmooth').checked });
+$('sScale').value = String(G.settings.scale); $('sScale').onchange = () => G.applyDisplay({ scale: +$('sScale').value });
+$('cOutline').checked = !!G.settings.outline; $('cOutline').onchange = () => G.applyDisplay({ outline: $('cOutline').checked });
+$('cBloom').checked = !!G.settings.bloom; $('cBloom').onchange = () => G.applyDisplay({ bloom: $('cBloom').checked });
+$('cShadows').checked = !!G.settings.shadows; $('cShadows').onchange = () => G.applyDisplay({ shadows: $('cShadows').checked });
 })(window);

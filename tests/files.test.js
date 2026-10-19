@@ -12,12 +12,20 @@ test('pages only load scripts that exist', () => {
     for (const m of read(page).matchAll(/<script src="([^"]+)"/g)) assert.ok(fs.existsSync(path.join(root, m[1])), `${page} loads ${m[1]}`);
 });
 
-test('every page that builds a figure loads the figure code in order', () => {
+test('every page that builds a figure loads the picture, the figure code and the world in dependency order', () => {
+  const ORDER = ['vendor/three.min.js', 'js/look.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-paint.js', 'js/poly-face.js', 'js/poly-jack.js', 'js/poly-jack-paint.js', 'js/poly-gerda.js', 'js/poly-gerda-paint.js', 'js/props.js', 'js/world.js'];
   for (const page of ['game.html', 'lap.html', 'models.html']) {
     const srcs = [...read(page).matchAll(/<script src="([^"]+)"/g)].map(m => m[1]), at = f => srcs.indexOf(f);
-    for (const f of ['vendor/three.min.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-jack.js', 'js/poly-gerda.js']) assert.ok(at(f) >= 0, `${page} loads ${f}`);
-    assert.ok(at('vendor/three.min.js') < at('js/poly-geo.js') && at('js/poly-geo.js') < at('js/poly.js') && at('js/poly.js') < at('js/poly-jack.js') && at('js/poly.js') < at('js/poly-gerda.js'), `${page} loads the figure code in dependency order`);
+    for (const f of ORDER) assert.ok(at(f) >= 0, `${page} loads ${f}`);
+    for (let i = 1; i < ORDER.length; i++) assert.ok(at(ORDER[i - 1]) < at(ORDER[i]), `${page} loads ${ORDER[i - 1]} before ${ORDER[i]}`);
   }
+});
+
+test('the pictures settings are the toon look\'s, and nothing of the retro pass is left', () => {
+  assert.ok(!fs.existsSync(path.join(root, 'js', 'retro.js')), 'js/retro.js is gone');
+  for (const f of [...fs.readdirSync(path.join(root, 'js')).map(n => 'js/' + n), ...PAGES, 'sw.js']) assert.ok(!/\bRetro\b|retro\.js|\.retro\b/.test(read(f)), `${f} does not use the retro pass`);
+  for (const id of ['sScale', 'cOutline', 'cBloom', 'cShadows']) assert.ok(read('game.html').includes(`id="${id}"`) && read('js/menus.js').includes(`'${id}'`), `the shell has the ${id} setting`);
+  for (const id of ['pScale', 'pOutline', 'pBloom', 'pShadows']) assert.ok(read('lap.html').includes(`id="${id}"`), `the correction scene has ${id}`);
 });
 
 test('the service worker caches only files that exist, and covers every script the pages load', () => {

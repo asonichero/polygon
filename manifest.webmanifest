@@ -1,7 +1,7 @@
 {
   "name": "Polygon",
   "short_name": "Polygon",
-  "description": "A low-poly engine in the style of the N64 and the PlayStation: Jack and Gerda, a sandbox stage, and the correction scene.",
+  "description": "A toon-shaded engine in the style of the Switch era: Jack and Gerda, a sandbox meadow, and the correction scene, all drawn in code.",
   "start_url": "game.html",
   "scope": "./",
   "display": "fullscreen",

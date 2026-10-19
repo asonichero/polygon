@@ -77,7 +77,7 @@
 
 <div id="title" class="screen">
   <h1>Polygon</h1>
-  <div class="sub">a low-poly engine: Jack and Gerda, N64 and PlayStation style</div>
+  <div class="sub">a toon-shaded engine: Jack and Gerda, painted entirely in code</div>
   <div id="menu">
     <button id="bPlay" class="primary">Sandbox</button>
     <a class="btn" id="bLap" href="lap.html">Correction scene</a>
@@ -86,7 +86,7 @@
   </div>
 </div>
 <div id="dev" class="screen-dev"></div>
-<div id="ver">v0.5.0</div>
+<div id="ver">v0.6.0</div>
 
 <div id="settings" class="screen">
   <div class="card narrow">
@@ -101,10 +101,10 @@
     <div class="row"><span>Advance dialogue automatically</span><input type="checkbox" id="cAuto"></div>
     <div class="row"><span>Subtitles</span><input type="checkbox" id="cSubs"></div>
     <h3>Picture</h3>
-    <div class="row"><span>Resolution</span><select id="sLines"><option value="0">Native</option><option value="480">480 lines</option><option value="360">360 lines</option><option value="240">240 lines (PlayStation)</option></select></div>
-    <div class="row"><span>15-bit colour dither</span><input type="checkbox" id="cDither"></div>
-    <div class="row"><span>Polygon wobble (vertex snap)</span><input type="checkbox" id="cSnap"></div>
-    <div class="row"><span>Smooth pixels (N64 filter)</span><input type="checkbox" id="cSmooth"></div>
+    <div class="row"><span>Render size</span><select id="sScale"><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">50%</option></select></div>
+    <div class="row"><span>Ink outlines</span><input type="checkbox" id="cOutline"></div>
+    <div class="row"><span>Glow (bloom)</span><input type="checkbox" id="cBloom"></div>
+    <div class="row"><span>Shadows</span><input type="checkbox" id="cShadows"></div>
     <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In the correction scene the Red button ends it at once, with nothing held against you.</p>
     <button class="primary" id="bBack">Back</button>
   </div>
@@ -127,11 +127,17 @@
 <div id="dbgBar"><button id="dbgBack" title="Back to the start of the previous beat (,)">⏮</button><button id="dbgPlay" title="Pause / play (P)">❚❚</button><button id="dbgFwd" title="On to the next beat (.)">⏭</button><span id="dbgInfo"></span></div>
 
 <script src="vendor/three.min.js"></script>
+<script src="js/look.js"></script>
 <script src="js/poly-geo.js"></script>
 <script src="js/poly.js"></script>
+<script src="js/poly-paint.js"></script>
+<script src="js/poly-face.js"></script>
 <script src="js/poly-jack.js"></script>
+<script src="js/poly-jack-paint.js"></script>
 <script src="js/poly-gerda.js"></script>
-<script src="js/retro.js"></script>
+<script src="js/poly-gerda-paint.js"></script>
+<script src="js/props.js"></script>
+<script src="js/world.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/game.js"></script>
 <script src="js/touchui.js"></script>

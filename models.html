@@ -16,7 +16,6 @@
   button:hover { background: #3a3a48; } button.on { background: #6b5a2a; border-color: #c9a84c; color: #fff; }
   .row label { display: flex; justify-content: space-between; font-size: 12px; color: #c9c9d1; } .row label span:last-child { color: #c9a84c; }
   input[type=range] { width: 100%; margin: 2px 0 8px; }
-  #atlas { image-rendering: pixelated; width: 256px; height: 256px; border: 1px solid #454555; background: #000; margin-top: 4px; display: block; }
   #stats { font-size: 12px; color: #c9a84c; margin-top: 4px; }
   @media (max-width: 760px) { #view { right: 0; bottom: 300px; } #panel { top: auto; width: 100%; height: 300px; border-left: 0; border-top: 1px solid #2c2c36; } }
 </style>
@@ -25,7 +24,7 @@
 <div id="view"></div>
 <aside id="panel">
   <h1>Models</h1>
-  <div class="sub">Jack (21) and Gerda (late 30s): about a thousand triangles each, rigid segments on a joint skeleton, a 128&times;128 painted atlas, vertex lighting. Drag to orbit, scroll to zoom, right-drag to pan.</div>
+  <div class="sub">Jack (21) and Gerda (late 30s): smooth models in rigid segments on one joint skeleton, painted in code on a 1024&times;1024 atlas each, drawn with toon shading and ink outlines. Drag to orbit, scroll to zoom, right-drag to pan.</div>
 
   <h3>Pose</h3>
   <div class="btns" id="poses"></div>
@@ -44,42 +43,44 @@
   <div class="row"><label><span>Scale</span><span id="sizeOut">100%</span></label><input id="size" type="range" min="25" max="100" value="100"></div>
 
   <h3>View</h3>
-  <div class="btns"><button id="spin">Turntable</button><button id="home">Reset camera</button><button id="face">Faces</button><button id="wire">Wireframe</button><button id="retro" class="on">Retro look</button></div>
+  <div class="btns"><button id="spin">Turntable</button><button id="home">Reset camera</button><button id="face">Faces</button><button id="wire">Wireframe</button></div>
+  <div class="btns" style="margin-top:6px"><button id="pOutline" class="on">Ink</button><button id="pBloom" class="on">Glow</button><button id="pShadows" class="on">Shadows</button></div>
   <div id="stats"></div>
   <h3>Scenes</h3>
   <div class="btns"><a href="lap.html" style="color:#c9a84c">Across the lap &rarr;</a></div>
   <h3>Texture atlases</h3>
-  <div class="sub">128&times;128 each, what the models are painted on.</div>
+  <div class="sub">1024&times;1024 each (shown at a quarter size), what the models are painted on.</div>
   <div id="atlases"></div>
 </aside>
 <script src="vendor/three.min.js"></script>
 <script src="vendor/OrbitControls.js"></script>
+<script src="js/look.js"></script>
 <script src="js/poly-geo.js"></script>
 <script src="js/poly.js"></script>
+<script src="js/poly-paint.js"></script>
+<script src="js/poly-face.js"></script>
 <script src="js/poly-jack.js"></script>
+<script src="js/poly-jack-paint.js"></script>
 <script src="js/poly-gerda.js"></script>
-<script src="js/retro.js"></script>
+<script src="js/poly-gerda-paint.js"></script>
+<script src="js/props.js"></script>
+<script src="js/world.js"></script>
 <script>
 (function () {
   var Poly = window.Poly, view = document.getElementById('view');
   var renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
-  renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(1);
+  renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   view.appendChild(renderer.domElement);
-  var retro = window.Retro ? window.Retro.attach(renderer, { lines: 360 }) : null;
-  var scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140, 300);
+  var look = window.Look.attach(renderer);
+  var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(36, 1, 1, 600);
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.minDistance = 8; controls.maxDistance = 260; controls.maxPolarAngle = Math.PI * 0.49;
   function home() { camera.position.set(14, 26, 78); controls.target.set(0, 15, 0); }
   home();
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30283a, 0.62));
-  var sun = new THREE.DirectionalLight(0xfff0d8, 0.62); sun.position.set(40, 80, 60); scene.add(sun);
+  var rig = window.Look.rig(scene, { fogNear: 260, fogFar: 900 }); rig.fit(new THREE.Vector3(0, 10, 0), 60);
 
-  var fc = document.createElement('canvas'); fc.width = fc.height = 32; var fx = fc.getContext('2d');
-  fx.fillStyle = '#3a3f4a'; fx.fillRect(0, 0, 32, 32); fx.fillStyle = '#343944'; fx.fillRect(0, 0, 16, 16); fx.fillRect(16, 16, 16, 16);
-  fx.fillStyle = '#2a2e38'; fx.fillRect(0, 15, 32, 1); fx.fillRect(15, 0, 1, 32);
-  var ft = new THREE.CanvasTexture(fc); ft.magFilter = THREE.NearestFilter; ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(16, 16); ft.encoding = THREE.sRGBEncoding;
-  var floor = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), new THREE.MeshLambertMaterial({ map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  scene.add(window.World.deck({ radius: 150 }));
 
   var jack = Poly.makeJack(), gerda = Poly.makeGerda('Work');
   var cast = [{ key: 'jack', rig: jack, x: -14 }, { key: 'gerda', rig: gerda, x: 14 }];
@@ -111,20 +112,20 @@
   document.getElementById('home').onclick = home;
   document.getElementById('face').onclick = function () { camera.position.set(0, 26, 34); controls.target.set(0, 26, 0); };
   var wire = document.getElementById('wire'); wire.onclick = function () { var on = !wire.classList.contains('on'); wire.classList.toggle('on', on); cast.forEach(function (c) { c.rig.root.traverse(function (o) { if (o.isMesh) o.material.wireframe = on; }); }); };
-  var rb = document.getElementById('retro'); rb.onclick = function () { if (!retro) return; retro.enabled = !retro.enabled; rb.classList.toggle('on', retro.enabled); resize(); };
+  [['pOutline', 'outline'], ['pBloom', 'bloom'], ['pShadows', 'shadows']].forEach(function (p) { var b = document.getElementById(p[0]); b.onclick = function () { var o = {}; o[p[1]] = !look[p[1]]; look.set(o); b.classList.toggle('on', !!look[p[1]]); }; });
   var at = document.getElementById('atlases');
-  cast.forEach(function (c) { var cv = document.createElement('canvas'); cv.width = cv.height = 128; cv.id = 'atlas'; cv.style.cssText = 'image-rendering:pixelated;width:256px;height:256px;border:1px solid #454555;background:#000;display:block;margin-top:4px'; c.atlasView = cv; at.appendChild(cv); });
+  cast.forEach(function (c) { var cv = document.createElement('canvas'); cv.width = cv.height = 256; cv.id = 'atlas'; cv.style.cssText = 'width:256px;height:256px;border:1px solid #454555;background:#000;display:block;margin-top:4px'; c.atlasView = cv; at.appendChild(cv); });
   function stats() { document.getElementById('stats').textContent = 'Jack ' + Poly.triCount(jack.root) + ' triangles · Gerda ' + Poly.triCount(gerda.root) + ' triangles'; }
-  function resize() { var w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); if (retro) retro.resize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  function resize() { var w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   window.addEventListener('resize', resize); resize(); stats();
   var last = performance.now(), acc = 0;
   (function loop(t) {
     var dt = Math.min(0.05, (t - last) / 1000); last = t; acc += dt;
     cast.forEach(function (c) { Poly.step(c.rig, dt); });
-    if (acc > 0.4) { acc = 0; cast.forEach(function (c) { var x = c.atlasView.getContext('2d'); x.clearRect(0, 0, 128, 128); x.drawImage(c.rig.atlas.canvas, 0, 0); }); }
-    controls.update(); (retro && retro.enabled ? retro.render(scene, camera) : renderer.render(scene, camera)); requestAnimationFrame(loop);
+    if (acc > 0.4) { acc = 0; cast.forEach(function (c) { var x = c.atlasView.getContext('2d'); x.clearRect(0, 0, 256, 256); x.drawImage(c.rig.atlas.canvas, 0, 0, 256, 256); }); }
+    controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop);
   })(last);
-  window.__poly = { cast: cast, jack: jack, gerda: gerda, camera: camera, controls: controls, scene: scene, setPose: setPose, jackSt: jackSt, repaintJ: repaintJ, retro: retro, renderer: renderer, home: home };
+  window.__poly = { cast: cast, jack: jack, gerda: gerda, camera: camera, controls: controls, scene: scene, setPose: setPose, jackSt: jackSt, repaintJ: repaintJ, look: look, renderer: renderer, home: home };
 })();
 </script>
 </body>

@@ -4,11 +4,11 @@
 'use strict';
 const LIB = {
   tools: [
-    ['models.html', 'Models', 'Jack and Gerda: their poses, outfits, expressions, clothes and marks, the texture atlases, wireframe and the retro look.'],
+    ['models.html', 'Models', 'Jack and Gerda: their poses, outfits, expressions, clothes and marks, the texture atlases, wireframe, and switches for ink, glow and shadows.'],
     ['lap.html', 'Correction positions', 'The over-the-knee and over-the-table positions with their pose editor, and Jack\'s arm poses over the knee: reaching back for his belt, and pinned behind his back.'],
   ],
   data: ['js/lap-poses.js'],
-  files: ['js/poly-geo.js', 'js/poly.js', 'js/poly-jack.js', 'js/poly-gerda.js', 'js/retro.js', 'js/game.js', 'js/stage.js', 'js/menus.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/audio.js', 'js/touchui.js', 'js/pain.js', 'js/lap.js'],
+  files: ['js/look.js', 'js/poly-geo.js', 'js/poly.js', 'js/poly-paint.js', 'js/poly-face.js', 'js/poly-jack.js', 'js/poly-jack-paint.js', 'js/poly-gerda.js', 'js/poly-gerda-paint.js', 'js/props.js', 'js/world.js', 'js/game.js', 'js/stage.js', 'js/menus.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/audio.js', 'js/touchui.js', 'js/pain.js', 'js/lap.js'],
 };
 (typeof window !== 'undefined' ? window : globalThis).DebugLib = LIB;
 if (typeof document === 'undefined') return;

@@ -1,4 +1,4 @@
-// Polygon — the sandbox stage: a plain floor with a few things to jump on, a chair, Gerda standing by it, and Jack to walk about as. There is no level here, only what shows the engine
+// Polygon — the sandbox stage: a meadow on a floating island with a few things to jump on, a chair, Gerda standing by it, and Jack to walk about as. There is no level here, only what shows the engine
 // working: the third-person controller (WASD relative to the camera, Jack turning into the way he goes rather than strafing; Shift runs, C creeps, Space jumps; drag, wheel or V for
 // the camera; [ and ] shrink and grow Jack, with the camera and his pace following his size), sitting in the chair, a walk cycle on the jointed rig, and a short cutscene built
 // with the toolkit in js/game.js.
@@ -13,57 +13,32 @@ const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI)
 const FULL = 0.95, SIZE_MIN = 0.5;                                  // Jack's full size is 95% of the model's own scale, as in the correction scene
 const WALK = 26, CREEP = 7.5, RUN = 50, GRAV = 420, JUMP_V = 112, STEP = 3;     // units per second (times his scale); a jump rises about 15 units
 const ZOOMS = [{ name: 'Close', d: 44 }, { name: 'Medium', d: 78 }, { name: 'Far', d: 130 }];
-const BOUNDS = { x0: -250, x1: 250, z0: -250, z1: 250 }, INF = 1e9;
+const EDGE = 258, INF = 1e9;                                          // (the island's walkable radius)
 const START = new V3(0, 0, 70), GERDA_AT = new V3(-34, 0, 18), CHAIR_AT = new V3(66, 0, 8);
-
-// ── Textures: small, hard-edged, painted here ──
-function tex(draw, repeat) {
-  const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d'); draw(x);
-  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; if (repeat) t.repeat.set(repeat, repeat); return t;
-}
-const rnd = seed => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const speckle = (x, seed, tones, n) => { const r = rnd(seed); for (let i = 0; i < n; i++) { x.fillStyle = tones[Math.floor(r() * tones.length)]; x.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 1 + Math.floor(r() * 2), 1); } };
-const floorTex = repeat => tex(x => {                                // flagstones, four to a tile, with mortar and wear
-  x.fillStyle = '#7a7f86'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#70757c'; x.fillRect(0, 0, 16, 16); x.fillRect(16, 16, 16, 16);
-  x.fillStyle = '#585c64'; x.fillRect(0, 15, 32, 1); x.fillRect(15, 0, 1, 32); x.fillRect(0, 31, 32, 1); x.fillRect(31, 0, 1, 32); speckle(x, 5, ['#8a8f96', '#63676f', '#6a6f76'], 60);
-}, repeat);
-const crateTex = () => tex(x => {
-  x.fillStyle = '#8a6a44'; x.fillRect(0, 0, 32, 32); for (let i = 0; i < 4; i++) { x.fillStyle = i % 2 ? '#7c5e3a' : '#94744c'; x.fillRect(0, i * 8, 32, 7); x.fillStyle = '#4e3a24'; x.fillRect(0, i * 8 + 7, 32, 1); }
-  x.fillStyle = '#5a4128'; x.fillRect(0, 0, 3, 32); x.fillRect(29, 0, 3, 32); x.fillRect(0, 0, 32, 3); x.fillRect(0, 29, 32, 3); speckle(x, 9, ['#a58358', '#6a4e30'], 40);
-});
-const stoneTex = () => tex(x => {
-  x.fillStyle = '#8b8d86'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#6e7068'; x.fillRect(0, 10, 32, 1); x.fillRect(0, 21, 32, 1); x.fillRect(8, 0, 1, 10); x.fillRect(22, 11, 1, 10); x.fillRect(12, 22, 1, 10);
-  speckle(x, 21, ['#9a9c94', '#7a7c74', '#6e7a5a'], 70);
-});
-const lam = map => new THREE.MeshLambertMaterial({ map });
-
-// A box whose texture repeats once every 16 units, whatever its size.
-function boxMesh(w, h, d, mat) {
-  const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
-  for (let f = 0; f < 6; f++) for (let v = 0; v < 4; v++) { const i = f * 4 + v; uv.setXY(i, uv.getX(i) * dims[f][0] / 16, uv.getY(i) * dims[f][1] / 16); }
-  return new THREE.Mesh(g, mat);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // The world
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function build(G) {
-  const scene = new THREE.Scene(), sky = 0x8fa6c4;
-  scene.background = new THREE.Color(sky); scene.fog = new THREE.Fog(sky, 200, 640);
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x4a4036, 0.72));
-  const sun = new THREE.DirectionalLight(0xfff0d8, 0.7); sun.position.set(60, 120, 80); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), lam(floorTex(1000 / 32))); ground.rotation.x = -Math.PI / 2; scene.add(ground);
-  const crate = lam(crateTex()), stone = lam(stoneTex()), solids = [];
-  const addBox = (x, z, w, d, h, mat, top, y0) => { y0 = y0 || 0; const m = boxMesh(w, h, d, mat); m.position.set(x, y0 + h / 2, z); scene.add(m); solids.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, top: top === undefined ? y0 + h : top }); return m; };
+  const scene = new THREE.Scene(), Look = root.Look, World = root.World;
+  const lit = Look.rig(scene, { fogNear: 170, fogFar: 640, shadow: 90, clouds: 11 });
+  const island = World.island({ radius: EDGE + 12 }); scene.add(island.group);
+  const crate = Look.toon({ map: P.woodTexture('#c8934f', { seed: 41, boards: 4 }), vertexColors: true }), stone = Look.toon({ map: World.stoneTex(), vertexColors: true }), solids = [];
+  const addBox = (x, z, w, d, h, mat, top, y0) => { y0 = y0 || 0; const m = World.block(w, h, d, mat); m.position.set(x, y0 + h / 2, z); Look.decorate(m); scene.add(m); solids.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, top: top === undefined ? y0 + h : top }); return m; };
   // things to jump on: low crates, a stack, a run of steps (each a jump higher), a wall, a pillar that cannot be climbed
   addBox(-60, -40, 16, 16, 8, crate); addBox(-36, -62, 20, 20, 14, crate); addBox(-36, -62, 10, 10, 8, crate, undefined, 14);
   for (let i = 0; i < 4; i++) addBox(40 + i * 11, -86, 11, 28, 5 * (i + 1), stone);
   addBox(0, -150, 120, 8, 12, stone); addBox(120, -40, 10, 10, 60, stone, INF);
+  // the meadow's trees, bushes and rocks, out of the way of everything above (the trees and rocks block, as the pillar does)
+  const keep = [{ x: 0, z: 78, r: 84 }, { x: GERDA_AT.x, z: GERDA_AT.z, r: 26 }, { x: CHAIR_AT.x, z: CHAIR_AT.z, r: 34 }, { x: -60, z: -40, r: 20 }, { x: -36, z: -62, r: 26 }, { x: 62, z: -86, r: 52 }, { x: 0, z: -150, r: 70 }, { x: 120, z: -40, r: 16 }];
+  const placed = World.scatter(scene, { seed: 4, inner: 118, outer: EDGE - 6, trees: 32, bushes: 46, rocks: 22, keep });
+  const scenery = placed.map(q => q.object);
+  for (const q of placed) if (q.kind !== 'bush') solids.push({ x0: q.x - q.r * 0.3, x1: q.x + q.r * 0.3, z0: q.z - q.r * 0.3, z1: q.z + q.r * 0.3, top: INF });
   const chair = P.makeChair(); chair.position.set(CHAIR_AT.x, P.CHAIR.legH, CHAIR_AT.z); chair.rotation.y = -Math.PI / 2; scene.add(chair);
   const jack = P.makeJack(), gerda = P.makeGerda('Work');
   jack.root.scale.setScalar(FULL); scene.add(jack.root); scene.add(gerda.root);
   gerda.root.position.copy(GERDA_AT); gerda.root.rotation.y = Math.PI / 2;
-  const world = { scene, jack, gerda, chair, solids, t: 0, player: null, mode: 'title', update: null };
+  const world = { scene, jack, gerda, chair, solids, lit, t: 0, player: null, mode: 'title', update: null };
   // idle life for Gerda (she watches Jack; gestures when she speaks)
   const ga = world.ga = { t: 0, look: 0, talk: 0 };
   gerda.after = r => {
@@ -75,6 +50,8 @@ function build(G) {
   P.setPose(jack, 'stand'); P.setPose(gerda, 'stand'); for (let i = 0; i < 30; i++) { P.step(jack, 0.1); P.step(gerda, 0.1); }
   world.update = dt => {
     world.t += dt; ga.t += dt; P.step(jack, dt); P.step(gerda, dt);
+    lit.sun.position.copy(jack.root.position).add(lit.key); lit.sun.target.position.copy(jack.root.position);
+    World.clearView(scenery, G.camera.position);
     if (world.player) world.player.tick(dt);
     // Gerda turns her head toward Jack when he is near
     const dx = jack.root.position.x - gerda.root.position.x, dz = jack.root.position.z - gerda.root.position.z, near = Math.hypot(dx, dz) < 90;
@@ -195,7 +172,7 @@ function play(G, world, hud) {
       // horizontal moves, each axis on its own, stopped by anything too tall to step onto
       for (const ax of ['x', 'z']) {
         if (!vel[ax]) continue; const nx = S.pos.x + (ax === 'x' ? vel.x * dt : 0), nz = S.pos.z + (ax === 'z' ? vel.z * dt : 0);
-        if (nx < BOUNDS.x0 || nx > BOUNDS.x1 || nz < BOUNDS.z0 || nz > BOUNDS.z1) continue;
+        if (Math.hypot(nx, nz) > EDGE) continue;
         if (groundY(nx, nz, r_) - S.y > stepMax) continue;
         if (Math.hypot(nx - GERDA_AT.x, nz - GERDA_AT.z) < 8 + r_ && Math.hypot(S.pos.x - GERDA_AT.x, S.pos.z - GERDA_AT.z) >= 8 + r_) continue;       // (Gerda is solid)
         if (ax === 'x') S.pos.x = nx; else S.pos.z = nz;
@@ -240,9 +217,9 @@ async function talk(G, world, S, ui, hud) {
   G.cut({ pos: mid.clone().addScaledVector(perp, 56).setY(24), look: mid.clone(), fov: 40 });
   const face = Math.atan2(g.x - j.x, g.z - j.z); S.heading = face; jack.root.rotation.y = face; gerda.root.rotation.y = face + Math.PI;
   ga.talk = 1;
-  await G.say('gerda', 'This is the stage. A floor, a few boxes to jump on, a chair. Nothing else, on purpose.');
+  await G.say('gerda', 'This is the stage. A meadow, a few boxes to jump on, a chair. Nothing else, on purpose.');
   await G.shot({ pos: g.clone().add(new V3(Math.sin(face + 2.4) * 30, 23, Math.cos(face + 2.4) * 30)), look: at(g, 22), fov: 36 }, 1.6);
-  await G.say('gerda', 'The engine is what is left: a camera, a voice, a walk, and two people made of about a thousand triangles each.');
+  await G.say('gerda', 'The engine is what is left: a camera, a voice, a walk, and a picture painted entirely in code. No models, no texture files.');
   await G.shot({ pos: j.clone().add(new V3(Math.sin(face - 2.4) * 28, 22, Math.cos(face - 2.4) * 28)), look: at(j, 20), fov: 36 }, 1.6);
   ga.talk = 0;
   const pick = await G.choose('jack', ['Can I be smaller?', 'Is that all?']);

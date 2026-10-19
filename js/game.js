@@ -16,11 +16,11 @@ const store = {
 };
 
 function create(els) {
-  const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });         // (the picture is multisampled by js/look.js)
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1)); els.stage.appendChild(renderer.domElement);
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 4000);
-  const G = { renderer, camera, scene: null, t: 0, skipping: false, settings: Object.assign({ speed: 1, auto: true, subtitles: true, lines: 480, dither: true, snap: false, smooth: false }, store.get(SET_KEY, {})), mode: 'notice', shots: {}, updaters: [], drone: null, maxDt: 0.05 };
-  if (root.Retro) { G.retro = root.Retro.attach(renderer, { lines: G.settings.lines, dither: G.settings.dither, snap: G.settings.snap, smooth: G.settings.smooth }); }
+  const camera = new THREE.PerspectiveCamera(50, 1, 2, 1600);
+  const G = { renderer, camera, scene: null, t: 0, skipping: false, settings: Object.assign({ speed: 1, auto: true, subtitles: true, outline: true, bloom: true, shadows: true, scale: 1 }, store.get(SET_KEY, {})), mode: 'notice', shots: {}, updaters: [], drone: null, maxDt: 0.05 };
+  if (root.Look) { G.look = root.Look.attach(renderer, { outline: G.settings.outline, bloom: G.settings.bloom, shadows: G.settings.shadows, scale: G.settings.scale }); }
   const cam = { pos: new V3(), look: new V3(), fov: 50 }, move = { active: null };
 
   function resize() { const w = els.stage.clientWidth || root.innerWidth, h = els.stage.clientHeight || root.innerHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
@@ -186,8 +186,8 @@ function create(els) {
   G.store = store; G.SAVE_KEY = SAVE_KEY; G.NOTICE_KEY = NOTICE_KEY; G.saveSettings = () => store.set(SET_KEY, G.settings);
   G.save = data => G.noSave || store.set(SAVE_KEY, Object.assign(store.get(SAVE_KEY, {}), data, { savedAt: Date.now() }));
   G.loadSave = () => store.get(SAVE_KEY, null); G.clearSave = () => store.del(SAVE_KEY);
-  // Display settings (js/retro.js): the internal resolution and the colour treatment, applied at once and kept.
-  G.applyDisplay = o => { Object.assign(G.settings, o); G.saveSettings(); if (G.retro) G.retro.set({ lines: G.settings.lines, dither: G.settings.dither, snap: G.settings.snap, smooth: G.settings.smooth }); };
+  // Display settings (js/look.js): ink outlines, glow, shadows and the size the picture is drawn at, applied at once and kept.
+  G.applyDisplay = o => { Object.assign(G.settings, o); G.saveSettings(); if (G.look) G.look.set({ outline: G.settings.outline, bloom: G.settings.bloom, shadows: G.settings.shadows, scale: G.settings.scale }); };
   return G;
 }
 

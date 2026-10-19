@@ -1,12 +1,11 @@
-// Polygon — the low-poly toolkit behind the characters (js/poly.js). Everything a 1996-2000 console model was made of, built in code: hand-placed rings lofted into limbs and torsos,
-// a head grid with a flat face plate, a small texture atlas painted pixel by pixel (the faces swap their texture like Ocarina of Time's and Final Fantasy VII's did), and vertex-shaded
-// (Gouraud) lighting through a plain MeshLambertMaterial. No asset files.
+// Polygon — the toolkit behind the characters (js/poly.js): hand-placed rings smoothed into limbs and torsos, a head grid with a flat face plate, sweeps for locks of hair, rounded boxes,
+// and a texture atlas painted in code with vector shapes (curves, gradients, soft edges) so faces and clothes come out crisp at any distance. Lighting, outline and post are js/look.js.
 //
-//   Atlas   one canvas per character; atlas.sheet(name, w, h) shelf-packs a painted rectangle ("sheet") and the meshes' UVs point into it.
-//   Sheet   a pixel painter local to its rectangle: rect, px, grid (rows of characters through a palette), noise, shade bands.
-//   Grid    rows x cols of positions with smooth normals; loft(rings) fills one from a stack of ellipses. patch() turns a run of its columns into a BufferGeometry, so one
-//           surface can be cut into pieces (the head's face plate and the rest of the head) that light as one.
-//   merge   joins geometries that share a bone, so a limb is a handful of draw calls rather than a dozen.
+//   Atlas   one canvas per character; atlas.pack([[name, w, h], ...]) packs painted rectangles ("sheets") and the meshes' UVs point into them.
+//   Sheet   a painter local to its rectangle: draw(fn) hands a clipped, translated 2D context to fn; wrapDraw(fn) repeats it across the seam of a sheet that wraps round a tube.
+//   Grid    rows x cols of positions with smooth normals; loft(rings) fills one from a stack of rings (smoothed, with a squareness exponent), sweep(path) from a curved spine. patch() turns a
+//           run of its columns into a BufferGeometry, so one surface can be cut into pieces (the head's face plate and the rest of the head) that light as one.
+//   merge   joins geometries that share a bone.
 (function (root) {
 'use strict';
 const THREE = root.THREE, V3 = THREE.Vector3;
@@ -15,12 +14,20 @@ const Poly = root.Poly = root.Poly || {};
 // ---------------------------------------------------------------------------------------------------------------------------
 // Atlas and sheets
 // ---------------------------------------------------------------------------------------------------------------------------
-const EPS = 0.02;                 // (texels pulled in from a sheet's edge, so nearest filtering never reads a neighbour's colour)
+const EPS = 0.6, PAD = 6;         // (texels pulled in from a sheet's edge, and the gap left between sheets: mipmaps blur a little way across a border, so the gap is filled with the edge's own colour, see bleed)
 class Sheet {
   constructor(atlas, name, x, y, w, h) { this.atlas = atlas; this.name = name; this.x = x; this.y = y; this.w = w; this.h = h; this.key = null; }
   get ctx() { return this.atlas.ctx; }
   // The atlas UV of a point (u, v in 0..1, v down the sheet from its top row).
   uv(u, v) { const A = this.atlas; return [(this.x + EPS + u * (this.w - 2 * EPS)) / A.w, 1 - (this.y + EPS + v * (this.h - 2 * EPS)) / A.h]; }
+  // Fill the gap round the sheet with its own edge colours (the sides that wrap round a tube take the colours of the opposite side), so mip levels never pick up a neighbour.
+  bleed(wrapX) {
+    const c = this.ctx, A = this.atlas, n = PAD - 1, x = this.x, y = this.y, w = this.w, h = this.h, cv = A.canvas;
+    const sx0 = wrapX ? w - 1 : 0, sx1 = wrapX ? 0 : w - 1;
+    if (x >= n) c.drawImage(cv, x + sx0, y, 1, h, x - n, y, n, h); if (x + w + n <= A.w) c.drawImage(cv, x + sx1, y, 1, h, x + w, y, n, h);
+    if (y >= n) c.drawImage(cv, x - Math.min(n, x), y, w + 2 * n, 1, x - Math.min(n, x), y - n, w + 2 * n, n); if (y + h + n <= A.h) c.drawImage(cv, x - Math.min(n, x), y + h - 1, w + 2 * n, 1, x - Math.min(n, x), y + h, w + 2 * n, n);
+    return this;
+  }
   // The UV at the centre of a texel (x, y), for parts that wear one flat colour.
   texel(x, y) { const A = this.atlas; return [(this.x + x + 0.5) / A.w, 1 - (this.y + y + 0.5) / A.h]; }
   clear() { this.ctx.clearRect(this.x, this.y, this.w, this.h); return this; }
@@ -59,6 +66,10 @@ class Sheet {
     }
     this.ctx.putImageData(img, this.x, this.y); return this;
   }
+  // Vector painting: fn(ctx, w, h) gets the atlas context clipped to this sheet and translated so (0, 0) is its top-left corner.
+  draw(fn) { const c = this.ctx; c.save(); c.beginPath(); c.rect(this.x, this.y, this.w, this.h); c.clip(); c.translate(this.x, this.y); try { fn(c, this.w, this.h); } finally { c.restore(); } return this; }
+  // The same, drawn three times (at 0 and one sheet-width either side) so shapes that cross the seam of a tube's sheet carry across it.
+  wrapDraw(fn) { for (const dx of [0, -this.w, this.w]) this.draw((c, w, h) => { c.translate(dx, 0); fn(c, w, h); }); return this; }
   // Ordered dither between the sheet's current pixels and a colour, for soft transitions in a few colours (the way a 4-bit texture does it).
   dither(x, y, w, h, c, amount) {
     const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -80,9 +91,9 @@ class Atlas {
   }
   // Shelf-pack a sheet: left to right along a row, a new row when it runs out.
   sheet(name, w, h) {
-    if (this._x + w > this.w) { this._x = 0; this._y += this._row + 1; this._row = 0; }
+    if (this._x + w > this.w) { this._x = 0; this._y += this._row + PAD; this._row = 0; }
     if (this._y + h > this.h || w > this.w) throw new Error('atlas full at sheet ' + name);
-    const s = new Sheet(this, name, this._x, this._y, w, h); this._x += w + 1; this._row = Math.max(this._row, h); this.sheets[name] = s; return s;
+    const s = new Sheet(this, name, this._x, this._y, w, h); this._x += w + PAD; this._row = Math.max(this._row, h); this.sheets[name] = s; return s;
   }
   // Pack a list of [name, w, h] tallest first (shelf packing wastes least that way); returns the sheets by name.
   pack(defs) {
@@ -91,7 +102,7 @@ class Atlas {
   texture() {
     if (this.tex) return this.tex;
     const t = this.tex = new THREE.CanvasTexture(this.canvas);
-    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.encoding = THREE.sRGBEncoding; return t;
+    t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.encoding = THREE.sRGBEncoding; return t;
   }
   touch() { if (this.tex) this.tex.needsUpdate = true; }
 }
@@ -101,7 +112,7 @@ class Atlas {
 // ---------------------------------------------------------------------------------------------------------------------------
 // A rows x cols lattice of points. wrap: the last column joins the first (a tube). Columns run round the tube, rows along it.
 class Grid {
-  constructor(rows, cols, wrap) { this.rows = rows; this.cols = cols; this.wrap = !!wrap; this.p = new Float32Array(rows * cols * 3); this.n = new Float32Array(rows * cols * 3); this.shade = new Float32Array(rows * cols).fill(1); this.apex = new Uint8Array(rows); }
+  constructor(rows, cols, wrap) { this.rows = rows; this.cols = cols; this.wrap = !!wrap; this.p = new Float32Array(rows * cols * 3); this.n = new Float32Array(rows * cols * 3); this.shade = new Float32Array(rows * cols).fill(1); this.apex = new Uint8Array(rows); this.apexDir = {}; }
   set(i, j, x, y, z) { const k = (i * this.cols + j) * 3; this.p[k] = x; this.p[k + 1] = y; this.p[k + 2] = z; return this; }
   get(i, j, out) { const k = (i * this.cols + j) * 3; return (out || new V3()).set(this.p[k], this.p[k + 1], this.p[k + 2]); }
   col(j) { return this.wrap ? ((j % this.cols) + this.cols) % this.cols : Math.max(0, Math.min(this.cols - 1, j)); }
@@ -116,7 +127,7 @@ class Grid {
         this.get(i0, j, c); this.get(i1, j, d); dv.subVectors(d, c);
         n.crossVectors(dv, du);
         const p = this.get(i, j, q);
-        if (n.lengthSq() < 1e-10) { n.set(0, this.apex[i] === 2 ? -1 : 1, 0); if (this.apex[i] === 0) n.copy(p).sub(mid); }
+        if (n.lengthSq() < 1e-10) { const d = this.apexDir[i]; if (d) n.set(d[0], d[1], d[2]); else { n.set(0, this.apex[i] === 2 ? -1 : 1, 0); if (this.apex[i] === 0) n.copy(p).sub(mid); } }
         else if (n.dot(p.clone().sub(mid)) < 0 && this.apex[i] === 0) n.negate();
         n.normalize(); const k = (i * this.cols + j) * 3; this.n[k] = n.x; this.n[k + 1] = n.y; this.n[k + 2] = n.z;
       }
@@ -143,7 +154,7 @@ class Grid {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx);
-    fixWinding(g);
+    fixWinding(g); g.userData.smoothNormals = true;
     return g;
   }
 }
@@ -160,15 +171,31 @@ function fixWinding(g) {
   if (total && agree < total / 2) { for (let t = 0; t < I.length; t += 3) { const x = I[t + 1]; I[t + 1] = I[t + 2]; I[t + 2] = x; } g.index.needsUpdate = true; }
 }
 
-// A tube from a stack of rings. rings: [{ y, rx, rz, cx, cz, shade, rot }] (any order along y; rows go in the order given). sides: columns round it (the first at the back, the middle at the front: the
-// front of a body is +z, its left is +x). cap: { top: { h, steps }, bottom: { h, steps } } closes an end with a dome of that height.
+// Smooth a ring table: a Catmull-Rom curve through the rings, k extra rings between each pair (every number a ring has is interpolated, radii kept above zero).
+function profile(rings, k) {
+  if (!k) return rings;
+  const keys = ['y', 'rx', 'rz', 'cx', 'cz', 'shade', 'p'], dflt = { p: 2, shade: 1, cx: 0, cz: 0 }, n = rings.length, out = [];
+  const val = (i, key) => { const r = rings[Math.max(0, Math.min(n - 1, i))], v = r[key]; return v === undefined ? (dflt[key] || 0) : v; };
+  const cr = (p0, p1, p2, p3, t) => 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+  for (let i = 0; i < n - 1; i++) for (let s = 0; s <= k; s++) {
+    const t = s / (k + 1), o = {};
+    for (const key of keys) o[key] = cr(val(i - 1, key), val(i, key), val(i + 1, key), val(i + 2, key), t);
+    o.rx = Math.max(0.02, o.rx); o.rz = Math.max(0.02, o.rz); out.push(o);
+  }
+  out.push(Object.assign({ cx: 0, cz: 0, shade: 1, p: 2 }, rings[n - 1]));
+  return out;
+}
+
+// A tube from a stack of rings. rings: [{ y, rx, rz, cx, cz, shade, p }] (any order along y; rows go in the order given; p is the squareness of the cross-section: 2 an ellipse, higher a rounded
+// square). sides: columns round it (the first at the back, the middle at the front: the front of a body is +z, its left is +x). smooth: k extra rings between each pair, on a smooth curve.
+// cap: { top: { h, steps }, bottom: { h, steps } } closes an end with a dome of that height.
 function loft(o) {
-  const N = o.sides || 8, rings = o.rings.map(r => Object.assign({ cx: 0, cz: 0, shade: 1 }, r));
+  const N = o.sides || 8, rings = profile(o.rings.map(r => Object.assign({ cx: 0, cz: 0, shade: 1, p: 2 }, r)), o.smooth || 0);
   const extra = (end, spec, dir) => {
     if (!spec) return []; const steps = spec.steps || 2, out = [], r = end;
     for (let s = 1; s <= steps; s++) {
       const a = (s / steps) * Math.PI / 2, k = Math.cos(a);
-      out.push({ y: r.y + dir * spec.h * Math.sin(a), rx: r.rx * k, rz: r.rz * k, cx: r.cx, cz: r.cz, shade: r.shade * (spec.shade === undefined ? 1 : 1 - (1 - spec.shade) * Math.sin(a)), apex: s === steps ? (dir > 0 ? 1 : 2) : 0 });
+      out.push({ y: r.y + dir * spec.h * Math.sin(a), rx: r.rx * k, rz: r.rz * k, cx: r.cx, cz: r.cz, p: r.p, shade: r.shade * (spec.shade === undefined ? 1 : 1 - (1 - spec.shade) * Math.sin(a)), apex: s === steps ? (dir > 0 ? 1 : 2) : 0 });
     }
     return out;
   };
@@ -179,13 +206,41 @@ function loft(o) {
   const full = asc ? capBot.slice().reverse().concat(rings, capTop) : capTop.slice().reverse().concat(rings, capBot);
   const g = new Grid(full.length, N, true);
   full.forEach((r, i) => {
-    g.apex[i] = r.apex || 0;
+    g.apex[i] = r.apex || 0; const ex = 2 / (r.p || 2);
     for (let j = 0; j < N; j++) {
-      const th = -Math.PI + 2 * Math.PI * j / N;
-      g.set(i, j, r.cx + r.rx * Math.sin(th), r.y, r.cz + r.rz * Math.cos(th)); g.shade[i * N + j] = r.shade;
+      const th = -Math.PI + 2 * Math.PI * j / N, sn = Math.sin(th), cs = Math.cos(th);
+      g.set(i, j, r.cx + r.rx * Math.sign(sn) * Math.pow(Math.abs(sn), ex), r.y, r.cz + r.rz * Math.sign(cs) * Math.pow(Math.abs(cs), ex)); g.shade[i * N + j] = r.shade;
     }
   });
   g.rings = full; g.sides = N;
+  return g.computeNormals();
+}
+// A tube along a curved spine, for locks of hair, tails and the like. o: { path: [[x,y,z], ...] (a smooth curve is drawn through them), steps: rings along it, sides, w: [start, end] width, t: [start, end]
+// thickness (thickness is along `up`, the way the lock lies on what it covers), up: [x,y,z], taper: the width profile exponent, tip: 'point' | 'round' | 'open' }.
+function sweep(o) {
+  const pts = o.path.map(a => new V3(a[0], a[1], a[2])), n = pts.length, steps = o.steps || 8, N = o.sides || 8, up0 = new V3(...(o.up || [0, 1, 0]));
+  const cr = (p0, p1, p2, p3, t) => p1.clone().multiplyScalar(2).add(p2.clone().sub(p0).multiplyScalar(t)).add(p0.clone().multiplyScalar(2).sub(p1.clone().multiplyScalar(5)).add(p2.clone().multiplyScalar(4)).sub(p3).multiplyScalar(t * t)).add(p0.clone().negate().add(p1.clone().multiplyScalar(3)).sub(p2.clone().multiplyScalar(3)).add(p3).multiplyScalar(t * t * t)).multiplyScalar(0.5);
+  const at = u => { const f = u * (n - 1), i = Math.min(n - 2, Math.floor(f)), t = f - i; return cr(pts[Math.max(0, i - 1)], pts[i], pts[i + 1], pts[Math.min(n - 1, i + 2)], t); };
+  const w = o.w || [1, 0.2], th = o.t || w, taper = o.taper === undefined ? 1 : o.taper, tip = o.tip || 'point', extraRows = tip === 'point' ? 1 : tip === 'round' ? 2 : 0;
+  const rows = steps + 1 + extraRows, g = new Grid(rows, N, true), P_ = [], T_ = [];
+  for (let i = 0; i <= steps; i++) P_.push(at(i / steps));
+  for (let i = 0; i <= steps; i++) { const a = P_[Math.max(0, i - 1)], b = P_[Math.min(steps, i + 1)]; T_.push(b.clone().sub(a).normalize()); }
+  let nrm = up0.clone().sub(T_[0].clone().multiplyScalar(up0.dot(T_[0]))).normalize();
+  if (!isFinite(nrm.x)) nrm.set(1, 0, 0);
+  const frames = [];
+  for (let i = 0; i <= steps; i++) {                            // parallel transport the thickness axis along the spine, staying as near `up` as it can
+    const tg = T_[i]; nrm = nrm.sub(tg.clone().multiplyScalar(nrm.dot(tg))); if (nrm.lengthSq() < 1e-8) nrm.set(0, 1, 0).cross(tg); nrm.normalize();
+    const want = up0.clone().sub(tg.clone().multiplyScalar(up0.dot(tg))); if (want.lengthSq() > 1e-6) nrm.lerp(want.normalize(), 0.3).normalize();
+    frames.push({ n: nrm.clone(), b: new V3().crossVectors(tg, nrm).normalize() });
+  }
+  for (let i = 0; i < rows; i++) {
+    const k = Math.min(i, steps), u = k / steps, f = frames[k], c = P_[k];
+    let sw = (w[0] + (w[1] - w[0]) * Math.pow(u, taper)), st = (th[0] + (th[1] - th[0]) * Math.pow(u, taper)), cc = c.clone();
+    if (i > steps) { const e = (i - steps) / extraRows; if (tip === 'point') { sw = st = 0; cc.addScaledVector(T_[steps], Math.max(w[1], th[1]) * 0.8); } else { const a = e * Math.PI / 2; cc.addScaledVector(T_[steps], Math.max(sw, st) * 0.9 * Math.sin(a)); sw *= Math.cos(a); st *= Math.cos(a); if (e >= 1) { sw = st = 0; } } }
+    if (sw <= 1e-5 && st <= 1e-5) { g.apex[i] = 1; g.apexDir[i] = T_[steps].toArray(); }
+    for (let j = 0; j < N; j++) { const a = -Math.PI + 2 * Math.PI * j / N, cs = Math.cos(a), sn = Math.sin(a); g.set(i, j, cc.x + f.b.x * sw * sn + f.n.x * st * cs, cc.y + f.b.y * sw * sn + f.n.y * st * cs, cc.z + f.b.z * sw * sn + f.n.z * st * cs); }
+  }
+  g.rows = rows; g.sides = N; g.pathPoints = P_;
   return g.computeNormals();
 }
 // The standard UV for a loft: u round the tube (0.5 at the front), v down the sheet from the top ring, by distance along the surface (or by ring index with even: true).
@@ -223,6 +278,7 @@ function merge(list) {
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
   out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); out.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); out.setIndex(I);
+  out.userData.smoothNormals = list.every(g => g.userData && g.userData.smoothNormals);
   out.computeBoundingSphere(); return out;
 }
 const place = (geo, x, y, z, rx, ry, rz) => {
@@ -242,7 +298,36 @@ function ball(rx, ry, rz, sides, rings, uvOrFn, shade) {
 function box(w, h, d, uv) { const g = new THREE.BoxGeometry(w, h, d); const c = new Float32Array(g.attributes.position.count * 3).fill(1); g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return uv ? flatUV(g, uv) : g; }
 // A cylinder (tube) along y, one texel.
 function tube(r0, r1, h, sides, uv) { const g = new THREE.CylinderGeometry(r1, r0, h, sides || 8, 1); const c = new Float32Array(g.attributes.position.count * 3).fill(1); g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return uv ? flatUV(g, uv) : g; }
-const triCount = obj => { let n = 0; obj.traverseVisible(o => { if (o.isMesh) { const g = o.geometry; n += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } }); return Math.round(n); };
+const triCount = obj => { let n = 0; obj.traverseVisible(o => { if (o.isMesh && !o.userData.hull) { const g = o.geometry; n += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } }); return Math.round(n); };
 
-Object.assign(Poly, { Atlas, Sheet, Grid, loft, loftUV, flatUV, paintShade, merge, place, ball, box, tube, triCount, mix, shadeHex, hex3, rgb, fixWinding });
+// A box with soft, rounded edges (w x h x d, the corners rounded to radius r), for props. Each face is a grid whose lines crowd into the rounded edges; every vertex is pushed out to the
+// rounded surface, so the normals are exact. UVs are not set: use boxUV to lay a tiling texture on it.
+function softBox(w, h, d, r, steps) {
+  r = Math.min(r === undefined ? Math.min(w, h, d) * 0.18 : r, Math.min(w, h, d) / 2 - 0.01); steps = steps || 3;
+  const half = [w / 2, h / 2, d / 2], axisPts = L => { const a = L / 2, up = []; for (let i = 0; i <= steps; i++) up.push(a - r + r * Math.tan(i / steps * Math.PI / 4)); return up.slice().reverse().map(v => -v).concat(up); };
+  const lists = half.map((a, k) => axisPts([w, h, d][k])), P = [], N = [], U = [], C = [], I = [], q = new V3(), inner = new V3(), n = new V3();
+  for (let axis = 0; axis < 3; axis++) for (const sg of [1, -1]) {
+    const u = (axis + 1) % 3, v = (axis + 2) % 3, A = lists[u], B = lists[v], base = P.length / 3;
+    for (let j = 0; j < B.length; j++) for (let i = 0; i < A.length; i++) {
+      q.set(0, 0, 0); q.setComponent(axis, sg * half[axis]); q.setComponent(u, A[i]); q.setComponent(v, B[j]);
+      for (let k = 0; k < 3; k++) inner.setComponent(k, Math.max(-(half[k] - r), Math.min(half[k] - r, q.getComponent(k))));
+      n.subVectors(q, inner).normalize(); q.copy(inner).addScaledVector(n, r);
+      P.push(q.x, q.y, q.z); N.push(n.x, n.y, n.z); U.push(0, 0); C.push(1, 1, 1);
+    }
+    for (let j = 0; j < B.length - 1; j++) for (let i = 0; i < A.length - 1; i++) { const a0 = base + j * A.length + i, b0 = a0 + 1, c0 = a0 + A.length, d0 = c0 + 1; if (sg > 0) I.push(a0, b0, c0, b0, d0, c0); else I.push(a0, c0, b0, b0, c0, d0); }          // (the winding that faces outward, for the + and - side of each axis)
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.setIndex(I);
+  g.userData.smoothNormals = true; g.computeBoundingSphere(); return g;
+}
+// Tile a texture over a prop by world position: each vertex takes its UV from the two axes its normal points least along, `scale` units to a repeat.
+function boxUV(geo, scale) {
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) {
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    if (ay >= ax && ay >= az) uv.setXY(i, p.getX(i) / scale, p.getZ(i) / scale); else if (ax >= az) uv.setXY(i, p.getZ(i) / scale, p.getY(i) / scale); else uv.setXY(i, p.getX(i) / scale, p.getY(i) / scale);
+  }
+  uv.needsUpdate = true; return geo;
+}
+Object.assign(Poly, { Atlas, Sheet, Grid, loft, sweep, profile, softBox, boxUV, loftUV, flatUV, paintShade, merge, place, ball, box, tube, triCount, mix, shadeHex, hex3, rgb, fixWinding });
 })(typeof window !== 'undefined' ? window : globalThis);

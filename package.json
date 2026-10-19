@@ -1,8 +1,8 @@
 {
   "name": "polygon",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
-  "description": "Polygon: a low-poly (N64 / PlayStation style) character engine. Jack and Gerda, a sandbox stage, a cutscene toolkit and the correction scene.",
+  "description": "Polygon: a toon-shaded (Switch-era) character engine, drawn entirely in code. Jack and Gerda, a sandbox stage, a cutscene toolkit and the correction scene.",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "serve": "npx http-server . -p 8123 -c-1"
